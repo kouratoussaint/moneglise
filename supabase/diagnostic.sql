@@ -43,3 +43,12 @@ select coalesce(e.data->>'nom', u.eglise_id) as eglise, u.data->>'prenom' as pre
 from enregistrements u left join enregistrements e on e.table_nom = 'eglises' and e.id = u.eglise_id
 where u.table_nom = 'users' and not u.supprime order by 1, 2;
 rollback;
+
+\echo '=== Désactivations et réactivations de comptes (historique) ==='
+begin read only;
+select h.data->>'le' as quand, coalesce(a.data->>'prenom', h.data->>'user_id') as par, h.data->>'libelle' as compte,
+       h.data->'avant'->>'actif' as avant, h.data->'apres'->>'actif' as apres
+from enregistrements h left join enregistrements a on a.table_nom = 'users' and a.id = h.data->>'user_id'
+where h.table_nom = 'historique' and h.data->>'table' = 'users' and (h.data->'apres') ? 'actif'
+order by 1;
+rollback;
