@@ -1,0 +1,16 @@
+# Diagnostic en lecture seule de la base Mon Église (aucune modification)
+# Onglet Actions › « Diagnostic » › Run workflow
+name: Diagnostic
+
+on:
+  workflow_dispatch:
+
+jobs:
+  diagnostic:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rattachement des comptes aux églises
+        run: psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f supabase/diagnostic.sql
