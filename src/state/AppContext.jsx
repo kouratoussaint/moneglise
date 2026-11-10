@@ -366,11 +366,14 @@ export function AppProvider({ children }) {
       setDb(dbVide());
     }
     const ok = await synchroniser({ complet: true });
-    const adhesions = dbRef.current.users.filter((x) => x.auth_id === s.user.id && x.actif !== false && x.statut !== 'refuse');
+    const toutes = dbRef.current.users.filter((x) => x.auth_id === s.user.id && x.statut !== 'refuse');
+    const adhesions = toutes.filter((x) => x.actif !== false);
     const pref = precedente?.egliseId;
     const u = adhesions.find((x) => x.eglise_id === pref && x.statut !== 'en_attente') || adhesions.find((x) => (x.statut || 'actif') === 'actif') || adhesions[0];
     if (!u) {
       await supabase().auth.signOut();
+      // Adhésion existante mais désactivée par un administrateur : le dire clairement
+      if (toutes.length) return 'Ce compte est désactivé. Contactez l\'administrateur de votre église pour le réactiver.';
       return ok ? 'Ce compte n\'est rattaché à aucune église. Contactez l\'administrateur de votre église.' : 'Impossible de joindre le serveur. Vérifiez votre connexion internet.';
     }
     if (u.actif === false) { await supabase().auth.signOut(); return 'Ce compte est désactivé. Contactez l\'administrateur de votre église.'; }

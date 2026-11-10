@@ -4,6 +4,13 @@
 import { Capacitor } from '@capacitor/core';
 
 const racine = document.documentElement;
+
+// Hauteur réelle de la zone d'affichage, mise à jour à chaque changement (clavier, rotation) :
+// 100vh peut rester figé à la hauteur « clavier ouvert » dans la vue web d'Android
+const majHauteur = () => racine.style.setProperty('--hauteur', `${window.innerHeight}px`);
+majHauteur();
+window.addEventListener('resize', majHauteur);
+window.visualViewport?.addEventListener('resize', majHauteur);
 const montrerChamp = () => {
   const el = document.activeElement;
   if (el && /INPUT|TEXTAREA|SELECT/.test(el.tagName)) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
@@ -25,7 +32,12 @@ export async function gererClavier() {
   };
   Keyboard.addListener('keyboardWillShow', (i) => ouvrir(i.keyboardHeight));
   Keyboard.addListener('keyboardDidShow', (i) => ouvrir(i.keyboardHeight));
-  const fermer = () => { racine.classList.remove('clavier-ouvert'); racine.style.setProperty('--clavier', '0px'); };
+  const fermer = () => {
+    racine.classList.remove('clavier-ouvert');
+    racine.style.setProperty('--clavier', '0px');
+    // Après la fermeture, Android rend la place : on remesure (plusieurs fois, le temps de l'animation)
+    [0, 120, 300, 600].forEach((d) => setTimeout(majHauteur, d));
+  };
   Keyboard.addListener('keyboardWillHide', fermer);
   Keyboard.addListener('keyboardDidHide', fermer);
 }

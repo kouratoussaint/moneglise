@@ -19,5 +19,6 @@
     "Keyboard": {
       "resizeOnFullScreen": true
     }
-  }
+  },
+  "backgroundColor": "#EEF3FA"
 }
