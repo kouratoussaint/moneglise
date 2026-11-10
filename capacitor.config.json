@@ -3,7 +3,7 @@
   "appName": "Mon Église",
   "webDir": "dist",
   "android": {
-    "backgroundColor": "#0B2A66",
+    "backgroundColor": "#EEF3FA",
     "adjustMarginsForEdgeToEdge": "force"
   },
   "plugins": {
@@ -17,7 +17,7 @@
       "iconColor": "#1F5FD6"
     },
     "Keyboard": {
-      "resizeOnFullScreen": true
+      "resizeOnFullScreen": false
     }
   },
   "backgroundColor": "#EEF3FA"
