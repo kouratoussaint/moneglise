@@ -1,6 +1,6 @@
 # Mon Église — Analyse de l'application
 
-*État au build 27 (`v1.0-build27`). Matrice des droits calculée automatiquement à partir du code (`src/lib/permissions.js`).*
+*État décrit : voir la dernière Release. Matrice des droits calculée automatiquement à partir du code (`src/lib/permissions.js`).*
 
 ## 1. Vue d'ensemble
 
