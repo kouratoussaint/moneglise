@@ -1,0 +1,23 @@
+{
+  "appId": "app.eglise360.mobile",
+  "appName": "Mon Église",
+  "webDir": "dist",
+  "android": {
+    "backgroundColor": "#0B2A66",
+    "adjustMarginsForEdgeToEdge": "force"
+  },
+  "plugins": {
+    "StatusBar": {
+      "backgroundColor": "#0B2A66",
+      "style": "DARK",
+      "overlaysWebView": false
+    },
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_notif",
+      "iconColor": "#1F5FD6"
+    },
+    "Keyboard": {
+      "resizeOnFullScreen": true
+    }
+  }
+}

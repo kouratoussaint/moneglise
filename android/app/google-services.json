@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "521175472438",
+    "project_id": "mon-eglise-e25b8",
+    "storage_bucket": "mon-eglise-e25b8.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:521175472438:android:e9d5ae48b53e3d51ebbb97",
+        "android_client_info": {
+          "package_name": "app.eglise360.mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBJNUKcxPdy565jgCwXlDrfQgt0xGpcpAg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
