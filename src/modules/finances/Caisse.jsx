@@ -142,7 +142,9 @@ export function BilanMois({ resultat, solde, mois, fin }) {
 export function Transfert() {
   const { db, egliseId, can, actions, notifier } = useApp();
   const nav = useNavigate();
-  const sources = useCaissesSaisie().filter((c) => can('fin.transferer', c.id));
+  // Caisses de départ : celles où l'on a le droit de transférer (un gestionnaire : ses caisses ;
+  // la caisse d'une structure : ses responsables ou ceux de l'église)
+  const sources = caissesEglise(db, egliseId).filter((c) => can('fin.transferer', c.id) && (!c.structure_id || can('fin.saisir', c.id) || can('admin.eglise')));
   // Caisses d'une structure : seulement pour ses responsables (séparation stricte des caisses)
   const toutes = caissesEglise(db, egliseId).filter((c) => !c.structure_id || can('fin.saisir', c.id) || can('admin.eglise'));
   const [params] = useSearchParams();

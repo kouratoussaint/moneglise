@@ -174,10 +174,8 @@ $$;
 -- et par les membres des structures auxquelles il appartient
 create or replace function public.e360_fidele_visible(eg text, fid text, d jsonb) returns boolean
 language sql stable security definer set search_path = public as $$
-  select e360_super() or e360_config(eg) or e360_droit('fin.voir_details', eg) or e360_droit('admin.utilisateurs', eg)
-      or d->>'user_id' = any(e360_mes_ids())
-      or exists (select 1 from enregistrements a where a.table_nom = 'appartenances' and not a.supprime and a.data->>'fidele_id' = fid
-                   and coalesce(a.data->>'jusqu_au', '') = '' and e360_membre_structure(a.data->>'structure_id'))
+  -- Décision #1 : tout membre de l'église voit la liste complète des fidèles
+  select e360_super() or eg = any(e360_mes_eglises())
 $$;
 
 -- ---------- Activités ----------
@@ -609,6 +607,13 @@ do $$ begin
   execute 'create policy e360_pieces_ajout on storage.objects for insert to authenticated with check (bucket_id = ''pieces'' and (public.e360_super() or public.e360_moi_dans((storage.foldername(name))[1]) is not null))';
 exception when others then raise notice 'Stockage des pièces non configuré : %', sqlerrm;
 end $$;
+
+-- Décision #2 : droit « Transférer » accordé à l'administrateur (une seule fois par église,
+-- pour ne pas écraser un réglage modifié ensuite dans Droits d'accès)
+update enregistrements
+   set data = jsonb_set(jsonb_set(data, '{droits,admin,fin.transferer}', 'true'), '{migrations}', coalesce(data->'migrations', '[]'::jsonb) || '"admin_transferer"'::jsonb)
+ where table_nom = 'eglises' and data ? 'droits' and data->'droits' ? 'admin'
+   and not coalesce((data->'migrations') ? 'admin_transferer', false);
 
 -- Temps réel (messages instantanés)
 do $$ begin

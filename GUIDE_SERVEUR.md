@@ -196,3 +196,12 @@ Supabase › Edge Functions › notifier : remplacez le code par le nouveau supa
 Supabase › SQL Editor : relancez **tout** supabase/schema.sql (données conservées). Corrections incluses :
 - un transfert vers ou depuis la caisse d'une structure n'est permis qu'aux responsables de l'église (séparation stricte des caisses) ;
 - le trésorier d'une structure peut clôturer les mois de sa propre caisse.
+
+---
+
+# Décisions #1 et #2
+
+## 19. Mettre à jour le serveur
+Supabase › SQL Editor : relancez **tout** supabase/schema.sql (données conservées).
+- **#1** : tout membre de l'église voit la liste complète des fidèles. Les coordonnées (téléphone, adresse, e-mail, date de naissance, informations) restent affichées seulement aux responsables, aux postes chargés des membres et à la personne elle-même.
+- **#2** : l'administrateur reçoit le droit « Transférer » dans chaque église existante. Ce réglage n'est appliqué qu'une fois : si vous le retirez ensuite dans Droits d'accès, il ne sera pas rétabli.

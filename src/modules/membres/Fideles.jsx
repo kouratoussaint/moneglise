@@ -10,10 +10,13 @@ import { Avatar, BadgeRole, Champ, EnTete, Feuille, Segmente, Vide } from '../..
 // Qui peut voir l'ensemble des fidèles et les gérer
 export function useDroitsFideles() {
   const { db, user, can, egliseId } = useApp();
-  const tous = can('admin.eglise') || can('admin.utilisateurs') || can('fin.voir_details');
+  // Décision #1 : tout membre de l'église voit la liste complète des fidèles ;
+  // les coordonnées (téléphone, adresse, e-mail…) restent réservées aux responsables et à la personne elle-même
+  const tous = true;
+  const responsable = can('admin.eglise') || can('admin.utilisateurs') || can('fin.voir_details');
   const fiche = ficheDuCompte(db, user?.id);
   const postesMembres = (db.postes || []).filter((p) => p.fidele_id && p.fidele_id === fiche?.id && p.actif !== false && p.droits?.membres);
-  return { tous, gerer: can('admin.eglise') || can('admin.utilisateurs') || postesMembres.length > 0, fiche, egliseId };
+  return { tous, responsable, gerer: can('admin.eglise') || can('admin.utilisateurs') || postesMembres.length > 0, fiche, egliseId };
 }
 
 const compteDe = (db, f) => f?.user_id && db.users.find((u) => u.id === f.user_id);
@@ -22,7 +25,7 @@ const avatarDe = (db, f) => { const u = compteDe(db, f); return { prenom: f?.pre
 export function ListeFideles() {
   const { db } = useApp();
   const nav = useNavigate();
-  const { tous, gerer, fiche, egliseId } = useDroitsFideles();
+  const { tous, responsable, gerer, fiche, egliseId } = useDroitsFideles();
   const [q, setQ] = useState('');
   const [structure, setStructure] = useState('');
   const [filtre, setFiltre] = useState('tous');
@@ -58,7 +61,7 @@ export function ListeFideles() {
         <div className="recherche"><Search size={18} /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Nom, prénom ou téléphone" /></div>
         <div className="deux-col">
           <select className="select-simple" value={structure} onChange={(e) => setStructure(e.target.value)}><option value="">Toutes les structures</option>{structures.map((s) => <option key={s.id} value={s.id}>{s.nom}</option>)}</select>
-          {tous && <select className="select-simple" value={filtre} onChange={(e) => setFiltre(e.target.value)}><option value="tous">Tous les fidèles</option><option value="responsables">Responsables</option><option value="simples">Fidèles sans rôle</option><option value="compte">Avec un compte</option><option value="sans">Sans compte</option></select>}
+          {responsable && <select className="select-simple" value={filtre} onChange={(e) => setFiltre(e.target.value)}><option value="tous">Tous les fidèles</option><option value="responsables">Responsables</option><option value="simples">Fidèles sans rôle</option><option value="compte">Avec un compte</option><option value="sans">Sans compte</option></select>}
         </div>
       </div>
       {liste.length === 0 ? <Vide icone="Users" titre="Aucun fidèle" texte={gerer ? 'Touchez le bouton en haut à droite pour enregistrer un fidèle.' : 'Les membres de vos structures apparaîtront ici.'} /> : (
@@ -70,7 +73,7 @@ export function ListeFideles() {
               <button key={f.id} className="ligne-user" onClick={() => nav(`/fideles/${f.id}`)}>
                 <Avatar user={avatarDe(db, f)} taille={42} />
                 <span className="ligne-user-texte"><strong>{nomFidele(f)}{f.id === fiche?.id ? ' (vous)' : ''}</strong>
-                  <small>{st.length ? st.map((s) => s.nom).join(' · ') : 'Aucune structure'}{f.telephone ? ` · ${f.telephone}` : ''}</small></span>
+                  <small>{st.length ? st.map((s) => s.nom).join(' · ') : responsable ? 'Aucune structure' : 'Fidèle'}{f.telephone && (responsable || f.id === fiche?.id) ? ` · ${f.telephone}` : ''}</small></span>
                 {u?.statut === 'en_attente' ? <span className="badge">En attente</span> : u && u.role !== 'fidele' ? <BadgeRole role={u.role} /> : !f.user_id && <span className="badge">Sans compte</span>}
               </button>
             );
@@ -125,7 +128,7 @@ export function FicheFidele() {
   const { id } = useParams();
   const { db, user, can, actions, notifier, egliseId } = useApp();
   const nav = useNavigate();
-  const { gerer, fiche } = useDroitsFideles();
+  const { gerer, fiche, responsable } = useDroitsFideles();
   const [edition, setEdition] = useState(null);
   const [ajout, setAjout] = useState(false);
   const [acces, setAcces] = useState(null);
@@ -138,6 +141,7 @@ export function FicheFidele() {
   const anciennes = (db.appartenances || []).filter((a) => a.fidele_id === f.id && a.jusqu_au);
   const autres = (db.structures || []).filter((s) => s.eglise_id === egliseId && s.actif !== false && !structures.some((x) => x.id === s.id) && droitStructure(db, user, can, s.id, 'membres'));
   const peutModifier = gerer || moi;
+  const coordonnees = responsable || gerer || moi;
 
   return (
     <div>
@@ -148,13 +152,13 @@ export function FicheFidele() {
         <p className="texte-doux">{u ? ROLES[u.role]?.label : 'Fidèle sans compte dans l\'application'}</p>
       </div>
       <dl className="fiche">
-        {f.telephone && <div><dt><Phone size={16} /> Téléphone</dt><dd><a className="lien" href={`tel:${f.telephone.replace(/\s/g, '')}`}>{f.telephone}</a></dd></div>}
-        {f.email && <div><dt><Mail size={16} /> E-mail</dt><dd>{f.email}</dd></div>}
-        {f.adresse && <div><dt><MapPin size={16} /> Adresse</dt><dd>{f.adresse}</dd></div>}
+        {coordonnees && f.telephone && <div><dt><Phone size={16} /> Téléphone</dt><dd><a className="lien" href={`tel:${f.telephone.replace(/\s/g, '')}`}>{f.telephone}</a></dd></div>}
+        {coordonnees && f.email && <div><dt><Mail size={16} /> E-mail</dt><dd>{f.email}</dd></div>}
+        {coordonnees && f.adresse && <div><dt><MapPin size={16} /> Adresse</dt><dd>{f.adresse}</dd></div>}
         {f.profession && <div><dt><Briefcase size={16} /> Profession</dt><dd>{f.profession}</dd></div>}
-        {f.date_naissance && <div><dt>Naissance</dt><dd>{dateFr(f.date_naissance)}</dd></div>}
+        {coordonnees && f.date_naissance && <div><dt>Naissance</dt><dd>{dateFr(f.date_naissance)}</dd></div>}
         <div><dt><CalendarDays size={16} /> Enregistré le</dt><dd>{f.date_enregistrement ? dateFr(f.date_enregistrement) : '—'}</dd></div>
-        {f.notes && <div className="bloc-texte"><dt>Informations</dt><dd>{f.notes}</dd></div>}
+        {coordonnees && f.notes && <div className="bloc-texte"><dt>Informations</dt><dd>{f.notes}</dd></div>}
       </dl>
 
       <section className="bloc bloc-liste">
