@@ -6,6 +6,7 @@ import {
   UserCog, ShieldCheck, Settings, Building2, LogOut, Cloud, CloudOff, RefreshCw, AlertTriangle, Server, UserRound, X, Smartphone, Bell, LifeBuoy, Info, MessageCircle, Building, Settings2, UserCheck, Upload, History, Trash2, Users, Network, CalendarDays,
 } from 'lucide-react';
 import { useApp } from '../state/AppContext';
+import { useVue } from '../state/useVue';
 import { caissesEglise } from '../lib/finance';
 import { ROLES } from '../lib/permissions';
 import { MODULES } from '../modules/registre';
@@ -83,6 +84,8 @@ export function EtatSync({ compact }) {
 }
 
 function Tiroir({ ouvert, fermer }) {
+  const vueMenu = useVue();
+  const voitDetailMenu = vueMenu.caisses.some(vueMenu.detail);
   const { user, eglise, can, actions, sync, online, notifs, db, mesAdhesions, egliseId } = useApp();
   const nav = useNavigate();
   const loc = useLocation();
@@ -124,11 +127,11 @@ function Tiroir({ ouvert, fermer }) {
           <nav>
             <Lien to="/" icone={Home} l="Accueil" />
             {can('msg.utiliser') && <Lien to="/messages" icone={MessageCircle} l={`Messages${msgNonLus ? ` (${msgNonLus})` : ''}`} />}
-            {can('fin.voir_details') && <Lien to="/operations" icone={ListOrdered} l="Opérations" />}
+            {voitDetailMenu && <Lien to="/operations" icone={ListOrdered} l="Opérations" />}
             <Lien to="/fideles" icone={Users} l="Fidèles" />
             <Lien to="/structures" icone={Network} l="Structures" />
             <Lien to="/activites" icone={CalendarDays} l="Activités" />
-            {can('fin.rapports') && <Lien to="/rapports" icone={BarChart3} l="Rapports" />}
+            {voitDetailMenu && <Lien to="/rapports" icone={BarChart3} l="Rapports" />}
             {can('fin.voir_details') && <Lien to="/clotures" icone={LockKeyhole} l="Clôtures mensuelles" />}
             {can('fin.transferer') && <Lien to="/transfert" icone={ArrowLeftRight} l="Transfert entre caisses" />}
           </nav>
@@ -208,6 +211,8 @@ function useTirerPourActualiser(actualiser) {
 }
 
 export default function AppShell() {
+  const vue = useVue(); // avant tout retour anticipé (règle des hooks)
+  const voitDetail = vue.caisses.some(vue.detail);
   const { user, pret, can, online, actions, notifier, db, eglise } = useApp();
   const loc = useLocation();
   const nav = useNavigate();
@@ -236,14 +241,17 @@ export default function AppShell() {
   const autorise = bloque && (user.statut || 'actif') === 'actif' && user.role === 'admin' && statutEglise === 'en_attente' && ['/configuration', '/profil'].includes(loc.pathname);
 
   const peutSaisir = saisissables.length > 0;
+  // Onglets Opérations et Rapports : dès qu'on voit le détail d'au moins une caisse
+  // (de l'église, ou de sa structure pour un trésorier ou un secrétaire) — même règle que l'accès aux écrans (#8)
+
   const peutTransferer = can('fin.transferer') && saisissables.some((c) => can('fin.transferer', c.id));
   const nonLus = totalNonLus(db, user);
   let tabs = [
     { to: '/', icone: Home, l: 'Accueil', fin: true },
-    can('fin.voir_details') && { to: '/operations', icone: ListOrdered, l: 'Opérations' },
+    voitDetail && { to: '/operations', icone: ListOrdered, l: 'Opérations' },
     peutSaisir && { fab: true },
     can('msg.utiliser') && { to: '/messages', icone: MessageCircle, l: 'Messages', badge: nonLus },
-    can('fin.rapports') && { to: '/rapports', icone: BarChart3, l: 'Rapports' },
+    voitDetail && { to: '/rapports', icone: BarChart3, l: 'Rapports' },
   ].filter(Boolean);
   tabs.push({ to: '/plus', icone: LayoutGrid, l: 'Plus' });
   const enConversation = /^\/messages\/./.test(loc.pathname) || loc.pathname === '/configuration' || loc.pathname === '/import';
