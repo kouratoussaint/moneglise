@@ -7,7 +7,8 @@ android {
         applicationId "app.eglise360.mobile"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 20
+        // Numéro de version : 20 par défaut, ou fourni par la compilation automatique (-PversionCode=…)
+        versionCode project.hasProperty('versionCode') ? project.property('versionCode').toInteger() : 20
         versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {

@@ -43,6 +43,21 @@ Augmentez `versionCode` dans `android/app/build.gradle` à chaque nouvelle versi
 
 > Conservez précieusement la clé de signature : sans elle, une nouvelle version ne peut pas s'installer par-dessus l'application déjà présente sur les téléphones.
 
+## Compilation automatique (GitHub Actions)
+
+À chaque envoi sur `main`, GitHub compile l'APK signé (onglet **Actions**, artefact téléchargeable 30 jours).
+À chaque étiquette `v…` (ex. `v1.0-build21`), une **Release** est créée avec l'APK joint.
+
+Configuration unique : dépôt › Settings › Secrets and variables › Actions › *New repository secret*, créer :
+- `KEYSTORE_BASE64` : la clé `eglise360.keystore` encodée en base64 ;
+- `KEYSTORE_PASSWORD` et `KEY_PASSWORD` : les mots de passe de la clé ;
+- `KEY_ALIAS` : `eglise360`.
+
+## Suivi des demandes
+
+Les bugs et évolutions se déclarent dans l'onglet **Issues** (modèles « Bug » et « Demande d'évolution »).
+Chaque commit qui règle une demande la référence (`corrige #12`) et la ferme automatiquement.
+
 ## Serveur
 
 Toute la mise en place est décrite dans **GUIDE_SERVEUR.md** :
