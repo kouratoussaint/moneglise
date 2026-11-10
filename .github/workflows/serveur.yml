@@ -54,8 +54,11 @@ jobs:
       - name: Déployer les fonctions (notifier, compte)
         if: github.event_name == 'push' || inputs.fonctions
         run: |
-          supabase functions deploy notifier --project-ref "$SUPABASE_PROJECT_REF"
-          supabase functions deploy compte --project-ref "$SUPABASE_PROJECT_REF"
+          # --yes : confirmation automatique (aucun terminal pour répondre dans GitHub Actions)
+          for f in notifier compte; do
+            supabase functions deploy "$f" --remote="$SUPABASE_PROJECT_REF" --yes \
+              || supabase functions deploy "$f" --project-ref "$SUPABASE_PROJECT_REF" --yes
+          done
 
       - name: Vérifications après déploiement
         run: |
