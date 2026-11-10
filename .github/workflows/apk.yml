@@ -13,7 +13,51 @@ permissions:
   contents: write
 
 jobs:
+  # 1. Code de l'application : analyse statique (variables non définies, règles React) et compilation web
+  verifications:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Analyse statique
+        run: npm run lint
+      - name: Compilation de l'application web
+        run: npm run build
+
+  # 2. Règles de sécurité du serveur, testées sur une base PostgreSQL neuve
+  serveur:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: e360test
+        ports: ['5432:5432']
+        options: --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PGHOST: localhost
+      PGUSER: postgres
+      PGPASSWORD: test
+      PGDATABASE: e360test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: pip install psycopg2-binary
+      - name: Tests de sécurité du serveur
+        run: npm run test:serveur
+
+  # 3. APK signé, seulement si les vérifications réussissent
   apk:
+    needs: [verifications, serveur]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

@@ -1,6 +1,6 @@
 # Mon Église — Analyse de l'application
 
-*État au build 25 (`v1.0-build25`). Matrice des droits calculée automatiquement à partir du code (`src/lib/permissions.js`).*
+*État au build 27 (`v1.0-build27`). Matrice des droits calculée automatiquement à partir du code (`src/lib/permissions.js`).*
 
 ## 1. Vue d'ensemble
 
@@ -56,7 +56,7 @@
 
 ### Règles générales
 - **Administrateur de l'application** : tous les droits, sur toutes les églises.
-- **Pasteur** : configure l'église (caisses, catégories, utilisateurs, paramètres) même si ces cases ne sont pas cochées pour lui, et voit toutes les structures.
+- **Pasteur** : configure l'église (caisses, catégories, utilisateurs, paramètres) même si ces cases ne sont pas cochées pour lui, et voit toutes les structures. Il **ne rouvre pas** les mois clôturés (#9) et **ne modifie pas** les droits d'accès (#10), ce que le serveur impose aussi.
 - **Responsables = fidèles** : un administrateur, pasteur ou gestionnaire a toujours au minimum les droits d'un fidèle.
 - **Gestionnaire** : saisit uniquement dans les caisses qui lui sont attribuées.
 - **Postes de structure** : un poste (président, trésorier…) ne donne que les droits cochés pour lui, dans sa structure seulement — jamais de droits sur l'église.
@@ -79,7 +79,7 @@
 | Supprimer une opération | ✓ | · | · | ✓ | · |
 | Faire des transferts entre caisses | ✓ | ✓ | · | ✓ | · |
 | Clôturer un mois | ✓ | ✓ | · | ✓ | · |
-| Rouvrir un mois clôturé | ✓ | ✓ | ✓ | · | · |
+| Rouvrir un mois clôturé | ✓ | ✓ | · | · | · |
 | Valider les opérations (si la validation est activée) | ✓ | · | ✓ | · | · |
 | **Accueil et structures** | | | | | |
 | Voir les données de toutes les structures (accueil, activités) | ✓ | · | ✓ | · | · |
@@ -107,7 +107,6 @@
 | Configurer les droits d'accès | ✓ | ✓ | · | · | · |
 | Paramètres de l'église | ✓ | ✓ | ✓ | · | · |
 
-
 ### Droits portés par les postes de structure
 Cochés poste par poste, valables uniquement dans la structure :
 voir le détail des opérations de la caisse · gérer les membres et les informations · gérer le bureau · saisir dans la caisse · valider les opérations · gérer les cotisations · gérer les catégories · gérer les activités.
@@ -119,20 +118,28 @@ Proposés par défaut selon l'intitulé : *Président* (détail, membres, bureau
 |---|---|---|---|
 | **Administrateur de l'application** | Accueil · Opérations · + · Messages · Rapports · Plus | Accueil complet de l'église consultée, raccourcis structures, toutes les structures | Tout, plus **Toutes les églises** (validation des églises et des pasteurs) |
 | **Administrateur d'église** | Accueil · Opérations · Messages · Rapports · Plus | Solde, caisses, membres, graphiques, dernières opérations, raccourcis structures, prochaines activités, ses structures | Paramètres, assistant, caisses, catégories, utilisateurs, droits d'accès, historique, corbeille, clôtures, transferts, fidèles, structures, activités |
-| **Pasteur** | Accueil · Opérations · Messages · Rapports · Plus | Comme l'administrateur + **toutes les structures** | Idem administrateur (sans droits d'accès), validation des opérations, réouverture des mois |
+| **Pasteur** | Accueil · Opérations · Messages · Rapports · Plus | Comme l'administrateur + **toutes les structures** | Idem administrateur, sauf droits d'accès et réouverture des mois ; validation des opérations |
 | **Gestionnaire** | Accueil · Opérations · + · Messages · Rapports · Plus | Accueil complet, ses structures | Saisie dans ses caisses, transferts, clôtures, demandes de réouverture, import Excel, rapports |
 | **Fidèle membre d'une structure** | Accueil · Messages · Plus | **Ses structures d'abord** (caisse, cotisation due, activités, opérations selon le poste), puis activités et caisses de l'église | Fidèles, structures, activités, messagerie, profil (mes structures, rejoindre une structure) |
-| **Fidèle avec un poste** (ex. trésorier JAD) | Accueil · + · Messages · Plus | Comme ci-dessus | En plus : saisie, cotisations, catégories, clôture de la caisse de sa structure ; bureau ou membres selon le poste |
+| **Fidèle avec un poste** (ex. trésorier JAD) | Accueil · Opérations · + · Messages · Rapports · Plus | Comme ci-dessus | En plus : saisie, cotisations, catégories, clôture de la caisse de sa structure ; bureau ou membres selon le poste |
 | **Fidèle sans structure** | Accueil · Messages · Plus | **Activités de l'église d'abord**, invitation à rejoindre une structure, puis totaux de l'église | Fidèles, structures, activités, messagerie, profil |
 | **Inscrit en attente** | — | Écran « adhésion en attente » | Aucun accès avant validation |
 
 ## 6. Constats de l'analyse
 
-Les points ci-dessous sont suivis dans les Issues GitHub.
+| # | Constat | Suite |
+|---|---|---|
+| 1 | Onglets Opérations/Rapports absents pour les postes de structure | Corrigé (#8) |
+| 2 | Pasteur : rouvrir sans clôturer | Décision : le pasteur ne rouvre pas (#9) |
+| 3 | Pasteur et droits d'accès | Décision : réservé à l'administrateur, imposé par le serveur (#10) |
+| 4 | Coordonnées masquées par l'application seulement | Ouvert (#11) |
+| 5 | Pas de tests automatiques | Corrigé : analyse statique + 28 tests de sécurité du serveur à chaque envoi (#12) |
+| 6 | Conflits hors connexion : la dernière modification envoyée l'emporte | Comportement assumé (l'historique garde tout) |
+| 7 | Actions des fidèles refusées dans l'historique par le serveur (trouvé par les tests) | Corrigé |
 
-1. **Barre du bas des postes de structure** : un trésorier ou une secrétaire de structure (rôle fidèle) peut ouvrir Opérations et Rapports pour sa caisse, mais ces onglets n'apparaissent pas dans sa barre du bas (ils dépendent encore du droit général).
-2. **Pasteur : rouvrir sans clôturer** : par défaut le pasteur peut rouvrir un mois mais pas le clôturer.
-3. **Pasteur et droits d'accès** : le pasteur configure l'église mais ne peut pas modifier les droits d'accès.
-4. **Coordonnées des fidèles** : masquées par l'application, mais transmises au téléphone par le serveur ; une protection stricte demanderait de séparer ces données.
-5. **Tests automatiques** : la compilation automatique ne vérifie ni l'analyse statique ni les règles du serveur ; les ajouter éviterait des régressions.
-6. **Conflits hors connexion** : deux modifications du même élément faites hors connexion sur deux téléphones → la dernière envoyée l'emporte (l'historique garde les deux).
+## 7. Vérifications automatiques
+
+À chaque envoi sur GitHub :
+1. **Analyse statique** du code (`npm run lint`) : variables non définies, règles des hooks React…
+2. **Tests de sécurité du serveur** (`npm run test:serveur`) : base PostgreSQL neuve, `schema.sql` appliqué deux fois, 28 vérifications de qui peut lire et écrire quoi.
+3. **APK signé**, produit seulement si les deux étapes précédentes réussissent.
