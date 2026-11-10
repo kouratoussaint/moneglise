@@ -21,7 +21,7 @@ const JOURS = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dim
 const ICONES_CAISSE = ['Church', 'Users', 'HardHat', 'HandHeart', 'Wallet', 'PiggyBank', 'Music', 'BookOpen', 'Heart', 'Gift'];
 
 export default function Configuration() {
-  const { db, eglise, egliseId, actions, notifier, user } = useApp();
+  const { db, eglise, egliseId, actions, notifier, user, can } = useApp();
   const nav = useNavigate();
   const [etape, setEtape] = useState(0);
   const d0 = eglise.droits || MATRICE_DEFAUT;
@@ -59,7 +59,7 @@ export default function Configuration() {
       caisses,
       categories: cats,
       parametres: { cultes: regles.cultes, fideles_mois_clotures: regles.fideles_mois_clotures },
-      droits: {
+      droits: !can('admin.droits') ? undefined : {
         fidele: { 'fin.voir_graphiques': regles.fideles_graphiques, 'msg.prive': regles.fideles_prive },
         gestionnaire: { 'msg.groupes': regles.gestionnaires_groupes, 'fin.supprimer': regles.gestionnaire_supprime },
         admin: { 'fin.saisir_toutes': regles.admin_saisie },
@@ -169,10 +169,13 @@ export default function Configuration() {
           <div className="carte-form">
             <span className="champ-label">Fidèles</span>
             <Interrupteur label="Voir uniquement les mois clôturés" actif={regles.fideles_mois_clotures} onChange={(v) => setRegles({ ...regles, fideles_mois_clotures: v })} />
+{can('admin.droits') && <>
             <Interrupteur label="Voir les graphiques" actif={regles.fideles_graphiques} onChange={(v) => setRegles({ ...regles, fideles_graphiques: v })} />
             <Interrupteur label="Envoyer des messages privés" actif={regles.fideles_prive} onChange={(v) => setRegles({ ...regles, fideles_prive: v })} />
+            </>}
             <p className="texte-doux petit">Chaque nouvelle adhésion est validée par l'administrateur.</p>
           </div>
+          {can('admin.droits') ? (
           <div className="carte-form">
             <span className="champ-label">Responsables</span>
             <Interrupteur label="L'administrateur peut saisir des opérations" aide="Dans toutes les caisses" actif={regles.admin_saisie} onChange={(v) => setRegles({ ...regles, admin_saisie: v })} />
@@ -180,6 +183,9 @@ export default function Configuration() {
             <Interrupteur label="Les gestionnaires peuvent créer des groupes" actif={regles.gestionnaires_groupes} onChange={(v) => setRegles({ ...regles, gestionnaires_groupes: v })} />
             <p className="texte-doux petit">Tous les autres droits se règlent ensuite dans Droits d'accès.</p>
           </div>
+          ) : (
+            <p className="note">Les droits d'accès (fidèles, responsables) sont réglés par l'administrateur dans Droits d'accès.</p>
+          )}
         </div>
       )}
 

@@ -303,7 +303,7 @@ begin
   end if;
   if t = 'corbeille' then return sup or (m is not null and (d->>'supprime_par' = any(mes) or e360_config(eg))); end if;
   if t = 'demandes' then
-    return sup or (m is not null and (d->>'demandeur' = any(mes) or e360_droit('fin.rouvrir', eg) or e360_config(eg)));
+    return sup or (m is not null and (d->>'demandeur' = any(mes) or e360_droit('fin.rouvrir', eg)));
   end if;
   if sup then return true; end if;
   if m is null then return false; end if;
@@ -345,6 +345,8 @@ begin
     when 'eglises' then
       -- L'administrateur configure son église mais ne peut pas la valider lui-même
       select data into ancien from enregistrements where table_nom = 'eglises' and id = rid;
+      -- Les droits d'accès ne changent qu'avec le droit « Configurer les droits d'accès » (décision #10 : pas le pasteur)
+      if (d->'droits') is distinct from (ancien->'droits') and not (e360_super() or e360_droit('admin.droits', eg)) then return false; end if;
       return rid = eg and (e360_config(eg) or e360_droit('admin.droits', eg))
          and coalesce(d->>'statut', 'actif') is not distinct from coalesce(ancien->>'statut', 'actif');
     when 'users' then
@@ -380,7 +382,8 @@ create policy e360_lecture on public.enregistrements for select to authenticated
     when table_nom = 'fideles' then eglise_id = any(e360_mes_eglises()) and e360_fidele_visible(eglise_id, id, data) or e360_super()
     when table_nom in ('appartenances', 'postes') then e360_super() or (eglise_id = any(e360_mes_eglises()) and (e360_config(eglise_id) or e360_droit('fin.voir_details', eglise_id)
       or e360_droit('admin.utilisateurs', eglise_id) or e360_membre_structure(data->>'structure_id') or data->>'fidele_id' = e360_mon_fidele(eglise_id)))
-    when table_nom = 'historique' then e360_super() or (eglise_id = any(e360_mes_eglises()) and e360_config(eglise_id))
+    -- Chacun relit ses propres actions : nécessaire à l'envoi (insertion avec mise à jour) des actions des fidèles
+    when table_nom = 'historique' then e360_super() or (eglise_id = any(e360_mes_eglises()) and e360_config(eglise_id)) or data->>'user_id' = any(e360_mes_ids())
     when table_nom = 'corbeille' then e360_super() or (eglise_id = any(e360_mes_eglises()) and (e360_config(eglise_id) or data->>'supprime_par' = any(e360_mes_ids())))
     when table_nom = 'demandes' then e360_super() or (eglise_id = any(e360_mes_eglises()) and (e360_droit('fin.voir_details', eglise_id) or data->>'demandeur' = any(e360_mes_ids())))
     -- Ses propres adhésions (même en attente) et les églises correspondantes
@@ -614,6 +617,12 @@ update enregistrements
    set data = jsonb_set(jsonb_set(data, '{droits,admin,fin.transferer}', 'true'), '{migrations}', coalesce(data->'migrations', '[]'::jsonb) || '"admin_transferer"'::jsonb)
  where table_nom = 'eglises' and data ? 'droits' and data->'droits' ? 'admin'
    and not coalesce((data->'migrations') ? 'admin_transferer', false);
+
+-- Décision #9 : le pasteur ne rouvre pas les mois clôturés (une seule fois par église)
+update enregistrements
+   set data = jsonb_set(jsonb_set(data, '{droits,pasteur,fin.rouvrir}', 'false'), '{migrations}', coalesce(data->'migrations', '[]'::jsonb) || '"pasteur_sans_reouverture"'::jsonb)
+ where table_nom = 'eglises' and data ? 'droits' and data->'droits' ? 'pasteur'
+   and not coalesce((data->'migrations') ? 'pasteur_sans_reouverture', false);
 
 -- Temps réel (messages instantanés)
 do $$ begin

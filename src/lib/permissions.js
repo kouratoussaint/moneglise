@@ -86,7 +86,7 @@ const NOTIF_GESTION = ['notif.operations', 'notif.modifications', 'notif.imports
 export const MATRICE_DEFAUT = {
   admin: avec([...MSG, ...NOTIF_TOUT, 'fin.transferer', 'msg.groupes', 'msg.annonces', 'fin.voir_totaux', 'fin.voir_details', 'fin.voir_graphiques', 'fin.rapports', 'fin.exporter', 'fin.cloturer', 'fin.rouvrir',
     'admin.caisses', 'admin.categories', 'admin.utilisateurs', 'admin.droits', 'admin.eglise']),
-  pasteur: avec([...MSG, ...NOTIF_TOUT, 'acc.toutes_structures', 'fin.valider', 'fin.rouvrir', 'msg.groupes', 'msg.annonces', 'fin.voir_totaux', 'fin.voir_details', 'fin.voir_graphiques', 'fin.rapports', 'fin.exporter']),
+  pasteur: avec([...MSG, ...NOTIF_TOUT, 'acc.toutes_structures', 'fin.valider', 'msg.groupes', 'msg.annonces', 'fin.voir_totaux', 'fin.voir_details', 'fin.voir_graphiques', 'fin.rapports', 'fin.exporter']),
   gestionnaire: avec([...MSG, ...NOTIF_GESTION, 'msg.groupes', 'fin.voir_totaux', 'fin.voir_details', 'fin.voir_graphiques', 'fin.rapports', 'fin.exporter',
     'fin.saisir', 'fin.modifier', 'fin.supprimer', 'fin.transferer', 'fin.cloturer']),
   fidele: avec([...MSG, 'fin.voir_totaux', 'fin.voir_graphiques']),

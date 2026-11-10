@@ -205,3 +205,9 @@ Supabase › SQL Editor : relancez **tout** supabase/schema.sql (données conser
 Supabase › SQL Editor : relancez **tout** supabase/schema.sql (données conservées).
 - **#1** : tout membre de l'église voit la liste complète des fidèles. Les coordonnées (téléphone, adresse, e-mail, date de naissance, informations) restent affichées seulement aux responsables, aux postes chargés des membres et à la personne elle-même.
 - **#2** : l'administrateur reçoit le droit « Transférer » dans chaque église existante. Ce réglage n'est appliqué qu'une fois : si vous le retirez ensuite dans Droits d'accès, il ne sera pas rétabli.
+
+## 20. Décisions #9 et #10, historique des fidèles
+Supabase › SQL Editor : relancez **tout** supabase/schema.sql (données conservées).
+- **#9** : le pasteur ne rouvre plus les mois clôturés (retiré une seule fois dans chaque église ; réglable ensuite dans Droits d'accès).
+- **#10** : seul l'administrateur (droit « Configurer les droits d'accès ») peut modifier les droits, y compris via l'assistant.
+- **Correction** : les actions des fidèles (demandes d'adhésion, paiements saisis par un trésorier de structure, activités d'un président…) sont de nouveau acceptées dans l'historique.
