@@ -33,3 +33,13 @@ select coalesce(e.data->>'nom', u.eglise_id) as eglise, coalesce(e.data->>'statu
 from enregistrements u left join enregistrements e on e.table_nom = 'eglises' and e.id = u.eglise_id
 where u.table_nom = 'users' and not u.supprime group by 1, 2 order by 1;
 rollback;
+
+\echo '=== Adhésions par compte (prénom, rôle, statut, actif) ==='
+begin read only;
+select coalesce(e.data->>'nom', u.eglise_id) as eglise, u.data->>'prenom' as prenom, u.data->>'role' as role,
+       coalesce(u.data->>'statut', 'actif') as statut, coalesce(u.data->>'actif', 'true') as actif,
+       case when coalesce(u.data->>'auth_id', '') = '' then 'non relié' else 'relié' end as compte,
+       (select a.last_sign_in_at::date from auth.users a where a.id::text = u.data->>'auth_id') as derniere_connexion
+from enregistrements u left join enregistrements e on e.table_nom = 'eglises' and e.id = u.eglise_id
+where u.table_nom = 'users' and not u.supprime order by 1, 2;
+rollback;
