@@ -1,0 +1,70 @@
+# Déploiement du serveur Supabase de Mon Église
+# - à chaque étiquette v* (nouvelle version) : applique schema.sql, déploie les fonctions, vérifie
+# - à la demande : onglet Actions › « Serveur Supabase » › Run workflow
+# Secrets du dépôt nécessaires : SUPABASE_DB_URL, SUPABASE_ACCESS_TOKEN, SUPABASE_PROJECT_REF
+name: Serveur Supabase
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      fonctions:
+        description: "Déployer aussi les fonctions (notifier, compte)"
+        type: boolean
+        default: true
+
+concurrency:
+  group: serveur-supabase
+  cancel-in-progress: false
+
+jobs:
+  deployer:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Vérifier la configuration
+        run: |
+          manque=""
+          [ -z "$SUPABASE_DB_URL" ] && manque="$manque SUPABASE_DB_URL"
+          [ -z "$SUPABASE_ACCESS_TOKEN" ] && manque="$manque SUPABASE_ACCESS_TOKEN"
+          [ -z "$SUPABASE_PROJECT_REF" ] && manque="$manque SUPABASE_PROJECT_REF"
+          if [ -n "$manque" ]; then echo "::error::Secrets manquants :$manque (README, section Déploiement du serveur)"; exit 1; fi
+
+      - name: Vérifier que c'est bien la base de Mon Église
+        run: |
+          # Garde-fou : la table « enregistrements » doit exister (sinon : mauvais projet, rien n'est modifié)
+          ok=$(psql "$SUPABASE_DB_URL" -tAc "select to_regclass('public.enregistrements') is not null")
+          if [ "$ok" != "t" ]; then echo "::error::Cette base ne contient pas Mon Église (table enregistrements absente). Vérifiez SUPABASE_DB_URL."; exit 1; fi
+          psql "$SUPABASE_DB_URL" -tAc "select 'Base Mon Église : ' || count(*) || ' enregistrements, ' || count(distinct eglise_id) || ' église(s)' from enregistrements where not supprime"
+
+      - name: Appliquer schema.sql
+        run: psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -q -f supabase/schema.sql
+
+      - uses: supabase/setup-cli@v1
+        if: github.event_name == 'push' || inputs.fonctions
+        with:
+          version: latest
+
+      - name: Déployer les fonctions (notifier, compte)
+        if: github.event_name == 'push' || inputs.fonctions
+        run: |
+          supabase functions deploy notifier --project-ref "$SUPABASE_PROJECT_REF"
+          supabase functions deploy compte --project-ref "$SUPABASE_PROJECT_REF"
+
+      - name: Vérifications après déploiement
+        run: |
+          psql "$SUPABASE_DB_URL" -tA << 'SQL'
+          select 'Fiches de fidèles : ' || count(*) from enregistrements where table_nom = 'fideles' and not supprime;
+          select 'Comptes sans fiche (hors administrateur de l''application) : ' || count(*) from enregistrements u
+           where u.table_nom = 'users' and not u.supprime and coalesce(u.data->>'role', '') <> 'super_admin' and u.eglise_id <> '_global'
+             and not exists (select 1 from enregistrements f where f.table_nom = 'fideles' and f.data->>'user_id' = u.id);
+          select 'Migrations des droits : ' || coalesce(string_agg(distinct m, ', '), 'aucune') from enregistrements e, jsonb_array_elements_text(coalesce(e.data->'migrations', '[]'::jsonb)) m where e.table_nom = 'eglises';
+          select 'Tâche planifiée des rappels : ' || case when exists (select 1 from pg_extension where extname = 'pg_cron') then
+            coalesce((select 'active (' || schedule || ')' from cron.job where jobname = 'e360-rappels'), 'absente') else 'pg_cron non activé' end;
+          SQL

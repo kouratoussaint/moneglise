@@ -53,6 +53,16 @@ Configuration unique : dépôt › Settings › Secrets and variables › Action
 - `KEYSTORE_PASSWORD` et `KEY_PASSWORD` : les mots de passe de la clé ;
 - `KEY_ALIAS` : `eglise360`.
 
+## Déploiement du serveur (GitHub Actions)
+
+À chaque étiquette `v…`, GitHub applique `supabase/schema.sql` sur la base de Mon Église, déploie les fonctions `notifier` et `compte`, puis affiche des vérifications (onglet **Actions** › *Serveur Supabase*). Il peut aussi être lancé à la demande (*Run workflow*).
+Garde-fou : si la base visée ne contient pas Mon Église, rien n'est modifié.
+
+Secrets du dépôt à créer une fois :
+- `SUPABASE_DB_URL` : Supabase › bouton **Connect** › *Session pooler* › adresse `postgresql://postgres.…` (remplacer `[YOUR-PASSWORD]` par le mot de passe de la base) ;
+- `SUPABASE_ACCESS_TOKEN` : Supabase › Account › **Access Tokens** › *Generate new token* (commence par `sbp_`) ;
+- `SUPABASE_PROJECT_REF` : l'identifiant du projet (dans l'adresse du tableau de bord : `supabase.com/dashboard/project/<identifiant>`).
+
 ## Suivi des demandes
 
 Les bugs et évolutions se déclarent dans l'onglet **Issues** (modèles « Bug » et « Demande d'évolution »).

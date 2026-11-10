@@ -211,3 +211,10 @@ Supabase › SQL Editor : relancez **tout** supabase/schema.sql (données conser
 - **#9** : le pasteur ne rouvre plus les mois clôturés (retiré une seule fois dans chaque église ; réglable ensuite dans Droits d'accès).
 - **#10** : seul l'administrateur (droit « Configurer les droits d'accès ») peut modifier les droits, y compris via l'assistant.
 - **Correction** : les actions des fidèles (demandes d'adhésion, paiements saisis par un trésorier de structure, activités d'un président…) sont de nouveau acceptées dans l'historique.
+
+---
+
+# Déploiement automatique (recommandé)
+
+Depuis la version 1.0-build31, le serveur se met à jour **automatiquement** à chaque nouvelle version, par GitHub (voir README, section « Déploiement du serveur ») : plus besoin de copier `schema.sql` ni le code des fonctions dans Supabase.
+Les étapes manuelles de ce guide restent valables pour une installation sans GitHub. Les réglages faits une seule fois (Firebase, webhook, modèle d'e-mail, SMTP, pg_cron) restent à faire dans Supabase.
