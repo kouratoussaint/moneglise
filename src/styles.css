@@ -1009,3 +1009,15 @@ button.badge-valider, button.badge-annulee { font-size: .76rem; padding: 4px 10p
 .separateur-section { display: flex; align-items: center; gap: 8px; margin: 26px 2px 4px; color: var(--navy); font-weight: 700; font-size: .95rem; }
 .separateur-section::after { content: ''; flex: 1; height: 1px; background: #DCE4F0; }
 button.carte-config { width: 100%; text-align: left; }
+
+/* ---------- Image des activités ---------- */
+.carte-activite.avec-image { flex-wrap: wrap; padding-top: 0; overflow: hidden; }
+.ca-image { flex: 0 0 calc(100% + 24px); height: 110px; margin: 0 -12px 2px; background-size: cover; background-position: center; }
+.activite-bandeau { width: 100%; max-height: 220px; object-fit: cover; border-radius: var(--r-xl); margin-bottom: 10px; display: block; box-shadow: var(--ombre); }
+.image-activite { position: relative; margin-bottom: 8px; }
+.image-activite img { width: 100%; max-height: 170px; object-fit: cover; border-radius: var(--r-m); display: block; }
+.image-activite .btn-icone { position: absolute; top: 6px; right: 6px; background: rgba(255, 255, 255, .92); }
+/* ---------- Tuile « Fidèles de l'église » ---------- */
+.stats-dont { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.stats-dont > small { font-size: .74rem; font-weight: 600; color: var(--doux); }
+.stats-dont .stat-role small { white-space: normal; line-height: 1.15; font-size: .7rem; }

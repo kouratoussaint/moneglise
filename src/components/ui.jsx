@@ -290,3 +290,26 @@ export function lirePiece(fichier) {
     r.readAsDataURL(fichier);
   });
 }
+
+// Image d'illustration (activité…) : proportions conservées, 640 px de large au plus, compression forte
+export function lireIllustration(fichier, largeur = 640, qualite = 0.62) {
+  return new Promise((ok, ko) => {
+    const r = new FileReader();
+    r.onerror = ko;
+    r.onload = () => {
+      const img = new Image();
+      img.onerror = () => ko(new Error('Image illisible'));
+      img.onload = () => {
+        const k = Math.min(1, largeur / img.width);
+        const c = document.createElement('canvas');
+        c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+        const ctx = c.getContext('2d');
+        ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height);
+        ctx.drawImage(img, 0, 0, c.width, c.height);
+        ok(c.toDataURL('image/jpeg', qualite));
+      };
+      img.src = r.result;
+    };
+    r.readAsDataURL(fichier);
+  });
+}

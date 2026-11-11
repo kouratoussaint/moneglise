@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Plus, MapPin, Clock, CalendarDays, Users, Pencil, Ban, CheckCircle2, XCircle, Bell, Info, Network, Trash2 } from 'lucide-react';
+import { Plus, MapPin, Clock, CalendarDays, Users, Pencil, Ban, CheckCircle2, XCircle, Bell, Info, Network, Trash2, ImagePlus, X } from 'lucide-react';
 import { useApp } from '../../state/AppContext';
 import { statutActivite, LIBELLES_STATUT, activitesVisibles, formatDebut, TYPES_ACTIVITE, RAPPELS, finDe } from '../../lib/activites';
 import { droitStructure, nomFidele, membresStructure, fidelesEglise } from '../../lib/structures';
 import { dateFr } from '../../lib/format';
-import { Champ, EnTete, Feuille, Segmente, Vide } from '../../components/ui';
+import { Champ, EnTete, Feuille, Segmente, Vide, lireIllustration } from '../../components/ui';
 
 const COULEUR = { a_venir: '#1F5FD6', en_cours: '#0E9F6E', realisee: '#5B6B86', annulee: '#D9475A', non_tenue: '#C98A06' };
 
@@ -15,7 +15,8 @@ export function CarteActivite({ a, db, compact }) {
   const structure = a.structure_id && (db.structures || []).find((s) => s.id === a.structure_id);
   const d = new Date(`${a.debut}:00`);
   return (
-    <button className={`carte-activite ${st} ${compact ? 'compacte' : ''}`} onClick={() => nav(`/activites/${a.id}`)}>
+    <button className={`carte-activite ${st} ${compact ? 'compacte' : ''} ${a.image && !compact ? 'avec-image' : ''}`} onClick={() => nav(`/activites/${a.id}`)}>
+      {a.image && !compact && <span className="ca-image" style={{ backgroundImage: `url(${a.image})` }} />}
       <span className="ca-date"><b>{d.getDate()}</b><small>{d.toLocaleDateString('fr-FR', { month: 'short' }).replace('.', '')}</small></span>
       <span className="ca-texte">
         <strong>{a.titre}</strong>
@@ -93,6 +94,16 @@ export function EditeurActivite({ activite, onFermer }) {
     <Feuille ouverte onFermer={onFermer} titre={activite.id ? 'Modifier l\'activité' : 'Nouvelle activité'}
       pied={<><button className="btn btn-doux" onClick={onFermer}>Annuler</button><button className="btn btn-primaire" onClick={enregistrer}>Enregistrer</button></>}>
       <div className="pile">
+        <div className="champ"><span className="champ-label">Image de l'activité (facultatif)</span>
+          {a.image ? (
+            <div className="image-activite"><img src={a.image} alt="" />
+              <button type="button" className="btn-icone" aria-label="Retirer l'image" onClick={() => setA({ ...a, image: '' })}><X size={18} /></button>
+            </div>
+          ) : null}
+          <label className="btn btn-doux"><ImagePlus size={18} /> {a.image ? 'Changer l\'image' : 'Ajouter une image'}
+            <input type="file" accept="image/*" hidden onChange={async (e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) try { setA({ ...a, image: await lireIllustration(f) }); } catch (er) { notifier(er.message || 'Image illisible', 'erreur'); } }} />
+          </label>
+        </div>
         <Champ label="Titre"><input value={a.titre} onChange={(e) => setA({ ...a, titre: e.target.value })} placeholder="Ex. Répétition générale" /></Champ>
         <Champ label="Organisée par">
           <select value={a.structure_id || ''} onChange={(e) => setA({ ...a, structure_id: e.target.value, responsables: [] })} disabled={!!activite.id}>
@@ -142,6 +153,7 @@ export function FicheActivite() {
   return (
     <div>
       <EnTete titre="Activité" actions={gere && st !== 'annulee' && <button className="btn-icone" aria-label="Modifier" onClick={() => setEdition(a)}><Pencil size={20} /></button>} />
+      {a.image && <img className="activite-bandeau" src={a.image} alt="" />}
       <div className={`activite-tete ${st}`}>
         <span className="ca-statut" style={{ color: COULEUR[st], background: `${COULEUR[st]}18` }}>{LIBELLES_STATUT[st]}</span>
         <h2>{a.titre}</h2>

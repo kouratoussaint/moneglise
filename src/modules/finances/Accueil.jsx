@@ -12,7 +12,7 @@ import { EtatSync } from '../../components/AppShell';
 import { IconeNotifs } from '../info/Info';
 import { useCompteur } from '../../lib/anim';
 import { personnes, presence } from '../../lib/messagerie';
-import { ficheDuCompte, structuresDuFidele, postesDuFidele, appartenancesStructure } from '../../lib/structures';
+import { ficheDuCompte, structuresDuFidele, postesDuFidele, appartenancesStructure, fidelesEglise } from '../../lib/structures';
 import { ROLES } from '../../lib/permissions';
 import { BarresMois } from './Graphiques';
 import { LigneOperation } from './Operations';
@@ -38,14 +38,21 @@ export default function Accueil() {
   }, [ops, caisses, moisCourant]);
 
   const soldeAnime = useCompteur(stats.global.solde);
-  // Statistiques des membres de l'église
+  // Fidèles de l'église : toute personne (avec ou sans compte) est d'abord un fidèle ;
+  // parmi eux, certains ont en plus une responsabilité (administrateur, pasteur, gestionnaire)
   const membres = useMemo(() => {
-    const liste = personnes(db).filter((u) => u.eglise_id === eglise?.id && u.actif !== false && u.role !== 'super_admin');
-    const par = (r) => liste.filter((u) => u.role === r).length;
+    const comptes = new Map(db.users.filter((u) => u.eglise_id === eglise?.id).map((u) => [u.id, u]));
+    const liste = fidelesEglise(db, eglise?.id).filter((f) => {
+      const u = f.user_id && comptes.get(f.user_id);
+      return f.actif !== false && (!u || (u.role !== 'super_admin' && u.actif !== false && u.statut !== 'refuse' && u.statut !== 'en_attente'));
+    });
+    const role = (f) => (f.user_id && comptes.get(f.user_id)?.role) || 'fidele';
+    const par = (r) => liste.filter((f) => role(f) === r).length;
+    const roles = [['admin', 'ShieldCheck'], ['pasteur', 'BookOpen'], ['gestionnaire', 'Wallet']].map(([r, i]) => ({ r, i, n: par(r) }));
     return {
-      total: liste.length,
-      roles: [['pasteur', 'BookOpen'], ['admin', 'ShieldCheck'], ['gestionnaire', 'Wallet'], ['fidele', 'Users']].map(([r, i]) => ({ r, i, n: par(r) })),
-      enLigne: liste.filter((u) => presence(db, u.id).enLigne).length,
+      total: liste.length, roles, simples: par('fidele'),
+      sansCompte: liste.filter((f) => !f.user_id).length,
+      enLigne: liste.filter((f) => f.user_id && presence(db, f.user_id).enLigne).length,
       attente: db.users.filter((u) => u.eglise_id === eglise?.id && u.statut === 'en_attente').length,
     };
   }, [db, eglise]);
@@ -147,22 +154,31 @@ export default function Accueil() {
       </div>
 
       {voirMembres && membres.total > 0 && (
-        <section className="bloc stats-membres" onClick={() => can('admin.utilisateurs') && nav('/admin/utilisateurs')}>
+        <section className="bloc stats-membres" onClick={() => nav('/fideles')}>
           <div className="bloc-tete">
-            <h2>Membres de l'église</h2>
+            <h2>Fidèles de l'église</h2>
             {membres.enLigne > 0 && <span className="en-ligne-maintenant"><i />{membres.enLigne} en ligne</span>}
           </div>
           <div className="stats-ligne">
-            <div className="stats-total"><strong>{membres.total}</strong><small>membres</small><em>dont {membres.total - (membres.roles.find((x) => x.r === 'fidele')?.n || 0)} responsable{membres.total - (membres.roles.find((x) => x.r === 'fidele')?.n || 0) > 1 ? 's' : ''}</em></div>
-            <div className="stats-roles">
-              {membres.roles.map((x) => (
-                <div key={x.r} className="stat-role" style={{ '--c': ROLES[x.r].couleur }}>
-                  <span><Icone nom={x.i} size={16} /></span><b>{x.n}</b><small>{ROLES[x.r].court}{x.n > 1 ? 's' : ''}</small>
+            <div className="stats-total"><strong>{membres.total}</strong><small>fidèle{membres.total > 1 ? 's' : ''}</small></div>
+            <div className="stats-dont">
+              <small>dont</small>
+              <div className="stats-roles">
+                {membres.roles.map((x) => (
+                  <div key={x.r} className="stat-role" style={{ '--c': ROLES[x.r].couleur }}>
+                    <span><Icone nom={x.i} size={16} /></span><b>{x.n}</b><small>{ROLES[x.r].court}{x.n > 1 ? 's' : ''}</small>
+                  </div>
+                ))}
+                <div className="stat-role" style={{ '--c': '#5B6B86' }}>
+                  <span><Icone nom="Users" size={16} /></span><b>{membres.sansCompte}</b><small>sans compte</small>
                 </div>
-              ))}
+              </div>
             </div>
           </div>
-          <div className="stats-barre">{membres.roles.filter((x) => x.n).map((x) => <i key={x.r} style={{ flex: x.n, background: ROLES[x.r].couleur }} />)}</div>
+          <div className="stats-barre">
+            {membres.roles.filter((x) => x.n).map((x) => <i key={x.r} style={{ flex: x.n, background: ROLES[x.r].couleur }} />)}
+            {membres.simples > 0 && <i style={{ flex: membres.simples, background: ROLES.fidele.couleur }} />}
+          </div>
           {membres.attente > 0 && <p className="stats-attente">{membres.attente} demande{membres.attente > 1 ? 's' : ''} d'adhésion en attente</p>}
         </section>
       )}
