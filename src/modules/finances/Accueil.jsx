@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
-import { ArrowDownLeft, ArrowUpRight, ChevronRight, Info, Building2, Menu, Settings2, ChevronDown, Users } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, ChevronRight, Info, Menu, Settings2, ChevronDown, Users } from 'lucide-react';
 import MesEglises from '../../components/MesEglises';
 import { useApp } from '../../state/AppContext';
 import { useVue } from '../../state/useVue';
@@ -11,8 +11,8 @@ import { Avatar, IMAGES, Icone, LogoEglise, Montant, Vide, useMenu } from '../..
 import { EtatSync } from '../../components/AppShell';
 import { IconeNotifs } from '../info/Info';
 import { useCompteur } from '../../lib/anim';
-import { personnes, presence } from '../../lib/messagerie';
-import { ficheDuCompte, structuresDuFidele, postesDuFidele, appartenancesStructure, fidelesEglise } from '../../lib/structures';
+import { presence } from '../../lib/messagerie';
+import { ficheDuCompte, structuresDuFidele, postesDuFidele, fidelesEglise } from '../../lib/structures';
 import { ROLES } from '../../lib/permissions';
 import { BarresMois } from './Graphiques';
 import { LigneOperation } from './Operations';

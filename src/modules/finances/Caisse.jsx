@@ -5,10 +5,9 @@ import EditeurCaisse from '../../components/EditeurCaisse';
 import { exporterExcel, exporterOperationsPDF, partagerTexte } from '../../lib/exporter';
 import { useApp } from '../../state/AppContext';
 import { useVue } from '../../state/useVue';
-import { useCaissesSaisie } from '../../components/AppShell';
 import { totaux, parMois, caissesEglise, estVerrouille, soldeCaisse } from '../../lib/finance';
 import { fcfa, lastMonths, ymOf, moisLabel, num, today, parseMontant } from '../../lib/format';
-import { Avatar, Champ, Confirmation, EnTete, Feuille, IMAGES, Icone, PastilleCaisse, Vide } from '../../components/ui';
+import { Avatar, Champ, Confirmation, EnTete, Feuille, IMAGES, Icone, Vide } from '../../components/ui';
 import { LigneSolde, BarresMois } from './Graphiques';
 import { LigneOperation } from './Operations';
 

@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useMemo, useState } from 'react';
-import { Plus as PlusIcon, Pencil, Trash2, Archive, ArchiveRestore, Search, Eye, EyeOff, Building2, Check, X, Hourglass } from 'lucide-react';
+import { Plus as PlusIcon, Pencil, Trash2, ArchiveRestore, Search, Eye, EyeOff, Check, X, Hourglass } from 'lucide-react';
 import { useApp } from '../../state/AppContext';
 import { caissesEglise, soldeCaisse } from '../../lib/finance';
 import { DROITS, MATRICE_DEFAUT, ROLES, ROLES_EGLISE } from '../../lib/permissions';

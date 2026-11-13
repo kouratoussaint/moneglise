@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Phone, MessageCircle, Bell, ArrowDownLeft, ArrowUpRight, LockKeyhole, Layers, CheckCheck, Trash2, Search, ChevronDown, Cloud, ShieldCheck, Smartphone, Users, HeartHandshake } from 'lucide-react';
+import { Phone, MessageCircle, Bell, ArrowDownLeft, ArrowUpRight, LockKeyhole, Layers, CheckCheck, Trash2, Search, ChevronDown, HeartHandshake } from 'lucide-react';
 import { useApp } from '../../state/AppContext';
 import { useApplication, telLien, waLien } from '../../lib/application';
 import { EnTete, IMAGES, SYMBOLE, Vide, useSelection, gestesSelection, BarreSelection } from '../../components/ui';

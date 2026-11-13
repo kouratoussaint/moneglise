@@ -2,8 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { NavLink, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Capacitor } from '@capacitor/core';
 import {
-  Home, ListOrdered, Plus, BarChart3, LayoutGrid, ArrowDownLeft, ArrowUpRight, ArrowLeftRight, LockKeyhole, Wallet, Tags,
-  UserCog, ShieldCheck, Settings, Building2, LogOut, Cloud, CloudOff, RefreshCw, AlertTriangle, Server, UserRound, X, Smartphone, Bell, LifeBuoy, Info, MessageCircle, Building, Settings2, UserCheck, Upload, History, Trash2, Users, Network, CalendarDays,
+  Home, ListOrdered, Plus, BarChart3, LayoutGrid, ArrowDownLeft, ArrowUpRight, ArrowLeftRight, Cloud, CloudOff, RefreshCw, AlertTriangle, X, Smartphone, MessageCircle, Upload,
 } from 'lucide-react';
 import { useApp } from '../state/AppContext';
 import { useVue } from '../state/useVue';
@@ -12,8 +11,7 @@ import { lireApplication } from '../lib/application';
 import { Wrench } from 'lucide-react';
 import { caissesEglise } from '../lib/finance';
 import { ROLES } from '../lib/permissions';
-import { MODULES } from '../modules/registre';
-import { Avatar, Confirmation, Feuille, Icone, LogoEglise, MenuCtx, SYMBOLE, Toast, pileRetour, useRetour } from './ui';
+import { Avatar, Confirmation, Feuille, LogoEglise, MenuCtx, SYMBOLE, Toast, pileRetour, useRetour } from './ui';
 import { ecouterClics } from '../lib/notifications';
 import { jouer } from '../lib/son';
 import { totalNonLus } from '../lib/messagerie';

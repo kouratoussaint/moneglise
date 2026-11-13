@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Search, SquarePen, Send, Check, CheckCheck, Clock3, Users, User, LifeBuoy, ArrowLeft, Info, Trash2, Megaphone, X, Pin, PinOff, BellOff, Bell, MailOpen, Mail, MessageCircle, MoreVertical, Copy } from 'lucide-react';
-import { vibrer } from '../../lib/son';
+import { Search, SquarePen, Send, Check, CheckCheck, Clock3, Users, User, LifeBuoy, ArrowLeft, Info, Trash2, Megaphone, Pin, PinOff, BellOff, Bell, MailOpen, Mail, MessageCircle, MoreVertical, Copy } from 'lucide-react';
 import { useApp } from '../../state/AppContext';
 import { conversationsDe, messagesDe, membresDe, personnes, personne, titreConv, statutMessage, nomCourt, TYPES_CONV, famille, lectureDe, presence } from '../../lib/messagerie';
 import { ROLES } from '../../lib/permissions';
 import { dateFr } from '../../lib/format';
-import { Avatar, BadgeRole, Champ, Confirmation, EnTete, Feuille, Icone, Vide, Segmente, useSelection, gestesSelection, BarreSelection } from '../../components/ui';
+import { Avatar, Champ, Confirmation, EnTete, Feuille, Icone, Vide, useSelection, gestesSelection, BarreSelection } from '../../components/ui';
 
 const heure = (iso) => new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 const quandListe = (iso) => {

@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Search, UserPlus, Phone, MapPin, Pencil, Network, Plus, LogOut, KeyRound, CalendarDays, Briefcase, Mail, Trash2 } from 'lucide-react';
+import { Search, UserPlus, Phone, MapPin, Pencil, Network, Plus, KeyRound, CalendarDays, Briefcase, Mail, Trash2 } from 'lucide-react';
 import { useApp } from '../../state/AppContext';
 import { ROLES } from '../../lib/permissions';
 import { dateFr } from '../../lib/format';
 import { fidelesEglise, nomFidele, structuresDuFidele, postesDuFidele, ficheDuCompte, droitStructure } from '../../lib/structures';
-import { Avatar, BadgeRole, Champ, EnTete, Feuille, Segmente, Vide } from '../../components/ui';
+import { Avatar, BadgeRole, Champ, EnTete, Feuille, Vide } from '../../components/ui';
 
 // Qui peut voir l'ensemble des fidèles et les gérer
 export function useDroitsFideles() {

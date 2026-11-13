@@ -1,10 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, RotateCcw, Camera, Trash2 } from 'lucide-react';
+import { RotateCcw, Camera, Trash2 } from 'lucide-react';
 import { useApp } from '../../state/AppContext';
-import { MODULES } from '../registre';
 import { ROLES } from '../../lib/permissions';
-import { Avatar, BadgeRole, Champ, Confirmation, EnTete, Feuille, Icone, Interrupteur, LigneMenu, LogoEglise, SYMBOLE, lireImage } from '../../components/ui';
+import { Avatar, BadgeRole, Champ, Confirmation, EnTete, Feuille, Interrupteur, LigneMenu, LogoEglise, lireImage } from '../../components/ui';
 import { sonActif, activerSon, jouer } from '../../lib/son';
 import { notifActives, activerNotif, demanderPermission } from '../../lib/notifications';
 import { MenuPlus } from '../../components/Menu';

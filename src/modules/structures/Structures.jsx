@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Plus, Users, Crown, Pencil, Search, UserMinus, Check, History, Wallet, CalendarDays, Power, ChevronRight, X, Trash2 } from 'lucide-react';
+import { Plus, Users, Crown, Pencil, Search, UserMinus, Check, History, Power, ChevronRight, X, Trash2 } from 'lucide-react';
 import { useApp } from '../../state/AppContext';
 import { dateFr } from '../../lib/format';
 import { membresStructure, appartenancesStructure, postesStructure, nomFidele, ficheDuCompte, droitStructure, estMembreDe, fidelesEglise, DROITS_POSTE, droitsParDefaut, POSTES_MODELE } from '../../lib/structures';
-import { Avatar, Champ, Confirmation, EnTete, Feuille, Interrupteur, Segmente, Vide } from '../../components/ui';
+import { Avatar, Champ, Confirmation, EnTete, Feuille, Interrupteur, Vide } from '../../components/ui';
 import { OngletCaisse } from './CaisseStructure';
 import { ListeActivites } from '../activites/Activites';
 import { demandesStructure } from '../../lib/structures';

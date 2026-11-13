@@ -20,7 +20,7 @@ import { ListeFideles, FicheFidele } from './modules/membres/Fideles';
 import { ListeStructures, DetailStructure } from './modules/structures/Structures';
 import { SuiviCotisation } from './modules/structures/CaisseStructure';
 import { ListeActivites, FicheActivite } from './modules/activites/Activites';
-import { AdminCaisses, AdminCategories, AdminUtilisateurs, AdminDroits, SuperEglises } from './modules/admin/Admin';
+import { AdminCaisses, AdminCategories, AdminUtilisateurs, AdminDroits } from './modules/admin/Admin';
 import { useVue } from './state/useVue';
 
 // Réservé à ceux qui voient le détail d'au moins une caisse (de l'église ou d'une de leurs structures)

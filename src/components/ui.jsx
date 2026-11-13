@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  AlertCircle, ArrowDownLeft, ArrowLeft, Menu, LifeBuoy, Info, MessageCircle, User, Bell, Smartphone, Settings2, History, Trash2, Hourglass, UserPlus, IdCard, BookOpen as BookOpen2, ArrowLeftRight, ArrowUpRight, Baby, BarChart3, BookOpen, Building2, CalendarDays, CheckCircle2, ChevronRight, Church, Circle, Gift, HandHeart, HandHelping, HardHat, Heart, Inbox, Landmark, LayoutGrid, LayoutList, List, Lock, LockKeyhole, LogOut, Megaphone, Music, Network, PiggyBank, Receipt, SearchX, Settings, ShieldCheck, Table2, Tags, UserCog, Users, Wallet, X,
+  AlertCircle, ArrowDownLeft, ArrowLeft, Menu, LifeBuoy, Info, MessageCircle, User, Bell, Smartphone, Settings2, History, Trash2, Hourglass, UserPlus, IdCard, ArrowLeftRight, ArrowUpRight, Baby, BarChart3, BookOpen, Building2, CalendarDays, CheckCircle2, ChevronRight, Church, Circle, Gift, HandHeart, HandHelping, HardHat, Heart, Inbox, Landmark, LayoutGrid, LayoutList, List, Lock, LockKeyhole, LogOut, Megaphone, Music, Network, PiggyBank, Receipt, SearchX, Settings, ShieldCheck, Table2, Tags, UserCog, Users, Wallet, X,
 } from 'lucide-react';
 import { ROLES } from '../lib/permissions';
 import { fcfa, initiales } from '../lib/format';
