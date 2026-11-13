@@ -10,7 +10,7 @@ import { ROLES, ROLES_EGLISE, DROITS, MATRICE_DEFAUT } from '../../lib/permissio
 import { totaux } from '../../lib/finance';
 import { statutActivite } from '../../lib/activites';
 import { fcfa, num, ymOf, dateFr } from '../../lib/format';
-import { Avatar, BadgeRole, Champ, Confirmation, EnTete, Feuille, LogoEglise, Interrupteur, Vide } from '../../components/ui';
+import { Avatar, Champ, Confirmation, EnTete, Feuille, LogoEglise, Interrupteur, Vide } from '../../components/ui';
 
 const STATUTS = { actif: ['Active', '#0E9F6E'], en_attente: ['En attente', '#C98A06'], suspendue: ['Suspendue', '#D9475A'], refuse: ['Refusée', '#5B6B86'] };
 const statutEglise = (e) => STATUTS[e.statut || 'actif'] || STATUTS.actif;
@@ -477,7 +477,7 @@ function ParametresApp() {
 }
 
 // ---------- 9. Sauvegarde d'une église ----------
-const TABLES_SAUVEGARDE = [['eglises', 'Église'], ['fideles', 'Fidèles'], ['users', 'Comptes'], ['structures', 'Structures'], ['appartenances', 'Appartenances'], ['postes', 'Bureaux'],
+const TABLES_SAUVEGARDE = [['eglises', 'Église'], ['fideles', 'Fidèles'], ['coordonnees', 'Coordonnées'], ['users', 'Comptes'], ['structures', 'Structures'], ['appartenances', 'Appartenances'], ['postes', 'Bureaux'],
   ['caisses', 'Caisses'], ['categories', 'Catégories'], ['operations', 'Opérations'], ['clotures', 'Clôtures'], ['cotisations', 'Cotisations'], ['paiements', 'Paiements'], ['activites', 'Activités']];
 const aplatir = (o) => Object.fromEntries(Object.entries(o).filter(([k]) => !['mdp', 'photo', 'image', 'logo'].includes(k)).map(([k, v]) => [k, v && typeof v === 'object' ? JSON.stringify(v) : v]));
 export async function sauvegarderEglise(db, e, format) {

@@ -20,6 +20,33 @@ import { Capacitor } from '@capacitor/core';
 
 const Ctx = createContext(null);
 
+// #11 Coordonnées des fidèles : stockées à part (table protégée par le serveur),
+// présentées aux écrans fusionnées avec la fiche
+export const CHAMPS_COORDONNEES = ['telephone', 'email', 'adresse', 'date_naissance', 'notes'];
+function avecCoordonnees(db) {
+  if (!db?.coordonnees?.length) return db;
+  const parFiche = new Map(db.coordonnees.map((c) => [c.fidele_id || c.id, c]));
+  return { ...db, fideles: (db.fideles || []).map((f) => {
+    const c = parFiche.get(f.id);
+    if (!c) return f;
+    const { id: _i, fidele_id: _f, eglise_id: _e, ...champs } = c;
+    return { ...f, ...champs };
+  }) };
+}
+// Sépare une fiche saisie en (fiche publique, coordonnées protégées)
+function separer(f) {
+  const fiche = {}, coord = {};
+  for (const [k, v] of Object.entries(f)) (CHAMPS_COORDONNEES.includes(k) ? coord : fiche)[k] = v;
+  return { fiche, coord };
+}
+function ecrireCoordonnees(d, fideleId, egliseId, coord) {
+  if (!Object.keys(coord).length) return;
+  d.coordonnees = d.coordonnees || [];
+  const ex = d.coordonnees.find((c) => c.id === fideleId);
+  if (ex) Object.assign(ex, coord);
+  else d.coordonnees.push({ id: fideleId, fidele_id: fideleId, eglise_id: egliseId, ...coord });
+}
+
 // Caisse propre à une structure, avec ses catégories de départ
 function creerCaisse(d, sid, nom) {
   if (d.caisses.some((c) => c.structure_id === sid)) return;
@@ -494,10 +521,12 @@ export function AppProvider({ children }) {
     // ---------- Fidèles, structures et bureaux ----------
     enregistrerFidele(f) {
       const id = f.id || uid('f');
+      const { fiche, coord } = separer(f);
       maj((d) => {
         const ex = d.fideles.find((x) => x.id === id);
-        if (ex) Object.assign(ex, f);
-        else d.fideles.push({ ...f, id, eglise_id: egliseId, date_enregistrement: f.date_enregistrement || today(), actif: true });
+        if (ex) { Object.assign(ex, fiche); for (const k of CHAMPS_COORDONNEES) delete ex[k]; }
+        else d.fideles.push({ ...fiche, id, eglise_id: egliseId, date_enregistrement: fiche.date_enregistrement || today(), actif: true });
+        ecrireCoordonnees(d, id, ex?.eglise_id || egliseId, coord);
         return d;
       });
       return id;
@@ -532,7 +561,7 @@ export function AppProvider({ children }) {
     supprimerFidele(id) {
       const f = db.fideles.find((x) => x.id === id);
       if (f?.user_id && db.users.some((u) => u.id === f.user_id)) return 'Cette personne a un compte : désactivez ou supprimez d\'abord son accès (Comptes et responsabilités).';
-      maj((d) => { d.fideles = d.fideles.filter((x) => x.id !== id); d.appartenances = d.appartenances.filter((a) => a.fidele_id !== id); return d; });
+      maj((d) => { d.fideles = d.fideles.filter((x) => x.id !== id); d.appartenances = d.appartenances.filter((a) => a.fidele_id !== id); d.coordonnees = (d.coordonnees || []).filter((c) => c.id !== id); return d; });
       return { corbeille: derniereCorbeille.current };
     },
     supprimerStructure(id) {
@@ -997,7 +1026,7 @@ export function AppProvider({ children }) {
           // Chaque compte a sa fiche de fidèle : on lie une fiche existante, sinon on en crée une
           const eg = u.eglise_id || egliseId;
           if (ficheLiee) { const f = d.fideles.find((x) => x.id === ficheLiee); if (f) f.user_id = nid; }
-          else if (u.role !== 'super_admin') d.fideles.push({ id: `f_${nid}`, eglise_id: eg, prenom: u.prenom, nom: u.nom || '', email: u.email, user_id: nid, date_enregistrement: today(), actif: true });
+          else if (u.role !== 'super_admin') { d.fideles.push({ id: `f_${nid}`, eglise_id: eg, prenom: u.prenom, nom: u.nom || '', user_id: nid, date_enregistrement: today(), actif: true }); ecrireCoordonnees(d, `f_${nid}`, eg, { email: u.email }); }
         }
         if (u.id) { const i = d.users.findIndex((x) => x.id === u.id); d.users[i] = { ...d.users[i], ...u }; }
         else d.users.push({ ...(online ? {} : { mdp: d.users.find((x) => x.email.toLowerCase() === u.email.toLowerCase())?.mdp || 'eglise360' }), actif: true, statut: 'actif', caisses: [], ...Object.fromEntries(Object.entries(u).filter(([k]) => k !== 'fidele_id')), email: u.email.trim().toLowerCase(), id: nid, eglise_id: u.eglise_id || egliseId });
@@ -1041,6 +1070,7 @@ export function AppProvider({ children }) {
     const serveur = (db?.notifications || []).filter((n) => ids.has(n.user_id) && !n.masque);
     return [...notifs, ...serveur].sort((a, b) => (b.le || '').localeCompare(a.le || '')).slice(0, 150);
   }, [notifs, db?.notifications, mesAdhesions]);
-  const value = { db, user, eglise, egliseId, can, actions, notifier, toast, sync, online, notifs: toutesNotifs, mesAdhesions, pret: !!db, aujourdhui: today() };
+  const dbVue = useMemo(() => avecCoordonnees(db), [db]);
+  const value = { db: dbVue, user, eglise, egliseId, can, actions, notifier, toast, sync, online, notifs: toutesNotifs, mesAdhesions, pret: !!db, aujourdhui: today() };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

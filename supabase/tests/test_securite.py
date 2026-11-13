@@ -87,6 +87,8 @@ def donnees():
     for nom, (eg, role, caisses) in comptes.items():
         sql("insert into auth.users (id, email) values (%s, %s)", compte(nom), f'{nom}@test.bf')
         ins('users', f'u_{nom}', eg, {'prenom': nom, 'role': role, 'caisses': caisses, 'auth_id': compte(nom)})
+    ins('fideles', 'f_sans', 'e1', {'prenom': 'SansCompte', 'telephone': '70000000', 'adresse': 'Secteur 22'})
+    sql(open(os.path.join(RACINE, 'supabase', 'schema.sql')).read())  # migration #11
     ins('caisses', 'c_eg', 'e1', {'nom': 'Caisse Église'})
     ins('structures', 's_jad', 'e1', {'nom': 'JAD'}); ins('structures', 's_asc', 'e1', {'nom': 'ASC'})
     ins('caisses', 'c_jad', 'e1', {'nom': 'Caisse JAD', 'structure_id': 's_jad', 'visible_fideles': False})
@@ -101,7 +103,7 @@ def tests():
     # Fiches de fidèles créées automatiquement pour chaque compte
     verifier("Fiche de fidèle créée pour chaque compte", len([i for i in ids('admin', 'fideles') or [] if i.startswith('f_u_')]), 6)
     # #1 Liste des fidèles : toute l'église, jamais une autre église
-    verifier("#1 Un simple fidèle voit toutes les fiches de son église", len(ids('membre', 'fideles')), 6)
+    verifier("#1 Un simple fidèle voit toutes les fiches de son église", len(ids('membre', 'fideles')), 7)
     verifier("#1 Un fidèle d'une autre église ne voit que la sienne", ids('externe', 'fideles'), ['f_u_externe'])
     # Historique : on ajoute, on ne modifie jamais
     verifier("Historique : ajout de sa propre action", ecrire('membre', 'historique', 'h1', 'e1', {'user_id': 'u_membre', 'action': 'creation'}), True)
@@ -146,6 +148,14 @@ def tests():
     verifier("Église suspendue : ses membres n'écrivent plus rien", ecrire('externe', 'fideles', 'f_x', 'e2', {'prenom': 'X'}), False)
     sql("update enregistrements set data = data || '{\"statut\": \"actif\"}' where table_nom = 'eglises' and id = 'e2'")
     verifier("Église réactivée : accès rétabli", ids('externe', 'fideles'), ['f_u_externe'])
+    # #11 Coordonnées des fidèles protégées par le serveur
+    verifier("#11 La fiche ne contient plus de téléphone", 'telephone' in sql("select data from enregistrements where table_nom = 'fideles' and id = 'f_sans'")[0][0], False)
+    verifier("#11 Un simple fidèle ne lit pas les coordonnées des autres", [i for i in (ids('membre', 'coordonnees') or []) if i != 'f_u_membre'], [])
+    verifier("#11 L'administrateur lit les coordonnées", 'f_sans' in (ids('admin', 'coordonnees') or []), True)
+    verifier("#11 Le président (poste chargé des membres) lit les coordonnées", 'f_sans' in (ids('pres', 'coordonnees') or []), True)
+    verifier("#11 Un fidèle complète ses propres coordonnées", ecrire('membre', 'coordonnees', 'f_u_membre', 'e1', {'fidele_id': 'f_u_membre', 'telephone': '76000000'}), True)
+    verifier("#11 Un fidèle lit ses propres coordonnées", 'f_u_membre' in (ids('membre', 'coordonnees') or []), True)
+    verifier("#11 Un fidèle ne modifie pas celles d'un autre", ecrire('membre', 'coordonnees', 'f_sans', 'e1', {'fidele_id': 'f_sans', 'telephone': '0'}), False)
     # #9 Pasteur et réouverture
     verifier("#9 Pasteur : ne rouvre pas un mois", comme('pasteur', "update enregistrements set supprime = true where table_nom = 'clotures' and id = 'cl_eg'")[0] and
              sql("select supprime from enregistrements where table_nom = 'clotures' and id = 'cl_eg'")[0][0], False)

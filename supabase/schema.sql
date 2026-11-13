@@ -173,6 +173,22 @@ language sql stable security definer set search_path = public as $$
         and coalesce((select (st.data->>'membres_voient_details')::boolean from enregistrements st where st.table_nom = 'structures' and st.id = e360_structure_caisse(cid)), false)))
 $$;
 
+-- Gestion des fidèles : responsables de l'église ou poste chargé des membres (président, secrétaire…)
+create or replace function public.e360_gere_fideles(eg text) returns boolean
+language sql stable security definer set search_path = public as $$
+  select e360_super() or e360_config(eg) or e360_droit('admin.utilisateurs', eg)
+      or exists (select 1 from enregistrements p where p.table_nom = 'postes' and p.eglise_id = eg and not p.supprime
+                   and p.data->>'fidele_id' = e360_mon_fidele(eg) and coalesce((p.data->'droits'->>'membres')::boolean, false))
+$$;
+
+-- Coordonnées d'un fidèle (téléphone, e-mail, adresse, date de naissance, informations) : #11
+-- transmises seulement aux responsables, aux postes chargés des membres et à la personne elle-même
+create or replace function public.e360_voit_coordonnees(eg text, fid text) returns boolean
+language sql stable security definer set search_path = public as $$
+  select e360_gere_fideles(eg) or e360_droit('fin.voir_details', eg)
+      or exists (select 1 from enregistrements f where f.table_nom = 'fideles' and f.id = fid and f.data->>'user_id' = any(e360_mes_ids()))
+$$;
+
 -- Une fiche de fidèle est visible par les responsables, par le fidèle lui-même
 -- et par les membres des structures auxquelles il appartient
 create or replace function public.e360_fidele_visible(eg text, fid text, d jsonb) returns boolean
@@ -339,6 +355,9 @@ begin
                        and p.data->>'fidele_id' = e360_mon_fidele(eg) and coalesce((p.data->'droits'->>'membres')::boolean, false))
           -- chacun peut compléter sa propre fiche (téléphone, adresse…), sans la rattacher à un autre compte
           or (d->>'user_id' = any(mes) and exists (select 1 from enregistrements f where f.table_nom = 'fideles' and f.id = rid and f.data->>'user_id' = d->>'user_id'));
+    when 'coordonnees' then
+      return rid = d->>'fidele_id' and (e360_gere_fideles(eg)
+          or exists (select 1 from enregistrements f where f.table_nom = 'fideles' and f.id = rid and f.data->>'user_id' = any(mes)));
     when 'activites' then
       return e360_config(eg) or (coalesce(d->>'structure_id', '') <> '' and e360_droit_poste(d->>'structure_id', 'activites'));
     when 'appartenances' then
@@ -385,6 +404,7 @@ create policy e360_lecture on public.enregistrements for select to authenticated
     when table_nom = 'presences' then e360_super() or eglise_id = any(e360_mes_eglises()) or data->>'role' = 'super_admin'
     when table_nom = 'notifications' then data->>'user_id' = any(e360_mes_ids())
     when table_nom = 'activites' then eglise_id = any(e360_mes_eglises()) and e360_activite_visible(eglise_id, data) or e360_super()
+    when table_nom = 'coordonnees' then eglise_id = any(e360_mes_eglises()) and e360_voit_coordonnees(eglise_id, data->>'fidele_id') or e360_super()
     when table_nom = 'fideles' then eglise_id = any(e360_mes_eglises()) and e360_fidele_visible(eglise_id, id, data) or e360_super()
     when table_nom in ('appartenances', 'postes') then e360_super() or (eglise_id = any(e360_mes_eglises()) and (e360_config(eglise_id) or e360_droit('fin.voir_details', eglise_id)
       or e360_droit('admin.utilisateurs', eglise_id) or e360_membre_structure(data->>'structure_id') or data->>'fidele_id' = e360_mon_fidele(eglise_id)))
@@ -474,8 +494,12 @@ begin
   if new.table_nom = 'users' and not new.supprime and coalesce(new.data->>'role', '') <> 'super_admin' and new.eglise_id <> '_global'
      and not exists (select 1 from enregistrements f where f.table_nom = 'fideles' and f.data->>'user_id' = new.id) then
     insert into enregistrements (table_nom, id, eglise_id, data) values ('fideles', 'f_' || new.id, new.eglise_id, jsonb_build_object(
-      'id', 'f_' || new.id, 'prenom', new.data->>'prenom', 'nom', new.data->>'nom', 'email', new.data->>'email', 'user_id', new.id,
+      'id', 'f_' || new.id, 'prenom', new.data->>'prenom', 'nom', new.data->>'nom', 'user_id', new.id,
       'date_enregistrement', to_char(now(), 'YYYY-MM-DD'), 'actif', true)) on conflict (table_nom, id) do nothing;
+    if coalesce(new.data->>'email', '') <> '' then
+      insert into enregistrements (table_nom, id, eglise_id, data) values ('coordonnees', 'f_' || new.id, new.eglise_id,
+        jsonb_build_object('fidele_id', 'f_' || new.id, 'email', new.data->>'email')) on conflict (table_nom, id) do nothing;
+    end if;
   end if;
   return new;
 end $$;
@@ -486,7 +510,7 @@ create trigger e360_fiche_auto after insert on public.enregistrements
 -- Fiches des comptes déjà existants (migration, sans doublon)
 insert into enregistrements (table_nom, id, eglise_id, data)
 select 'fideles', 'f_' || u.id, u.eglise_id, jsonb_build_object('id', 'f_' || u.id, 'prenom', u.data->>'prenom', 'nom', u.data->>'nom',
-       'email', u.data->>'email', 'user_id', u.id, 'date_enregistrement', to_char(u.maj_le, 'YYYY-MM-DD'), 'actif', true)
+       'user_id', u.id, 'date_enregistrement', to_char(u.maj_le, 'YYYY-MM-DD'), 'actif', true)
 from enregistrements u
 where u.table_nom = 'users' and not u.supprime and coalesce(u.data->>'role', '') <> 'super_admin' and u.eglise_id <> '_global'
   and not exists (select 1 from enregistrements f where f.table_nom = 'fideles' and f.data->>'user_id' = u.id)
@@ -629,6 +653,25 @@ update enregistrements
    set data = jsonb_set(jsonb_set(data, '{droits,pasteur,fin.rouvrir}', 'false'), '{migrations}', coalesce(data->'migrations', '[]'::jsonb) || '"pasteur_sans_reouverture"'::jsonb)
  where table_nom = 'eglises' and data ? 'droits' and data->'droits' ? 'pasteur'
    and not coalesce((data->'migrations') ? 'pasteur_sans_reouverture', false);
+
+-- #11 : les coordonnées quittent les fiches de fidèles pour la table protégée « coordonnees »
+insert into enregistrements (table_nom, id, eglise_id, data)
+select 'coordonnees', f.id, f.eglise_id,
+       jsonb_strip_nulls(jsonb_build_object('fidele_id', f.id, 'telephone', f.data->'telephone', 'email', f.data->'email',
+         'adresse', f.data->'adresse', 'date_naissance', f.data->'date_naissance', 'notes', f.data->'notes'))
+         || coalesce((select c.data from enregistrements c where c.table_nom = 'coordonnees' and c.id = f.id), '{}'::jsonb)
+from enregistrements f
+where f.table_nom = 'fideles' and f.data ?| array['telephone', 'email', 'adresse', 'date_naissance', 'notes']
+on conflict (table_nom, id) do update set data = excluded.data, supprime = false;
+-- e-mails des comptes : dans les coordonnées des fiches correspondantes
+insert into enregistrements (table_nom, id, eglise_id, data)
+select 'coordonnees', 'f_' || u.id, u.eglise_id, jsonb_build_object('fidele_id', 'f_' || u.id, 'email', u.data->>'email')
+from enregistrements u
+where u.table_nom = 'users' and not u.supprime and coalesce(u.data->>'email', '') <> '' and coalesce(u.data->>'role', '') <> 'super_admin'
+  and exists (select 1 from enregistrements f where f.table_nom = 'fideles' and f.id = 'f_' || u.id)
+on conflict (table_nom, id) do nothing;
+update enregistrements set data = data - 'telephone' - 'email' - 'adresse' - 'date_naissance' - 'notes'
+ where table_nom = 'fideles' and data ?| array['telephone', 'email', 'adresse', 'date_naissance', 'notes'];
 
 -- Temps réel (messages instantanés)
 do $$ begin

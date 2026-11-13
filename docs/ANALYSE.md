@@ -137,7 +137,7 @@ Le menu latéral et le menu Plus suivent la même organisation (`src/components/
 | 1 | Onglets Opérations/Rapports absents pour les postes de structure | Corrigé (#8) |
 | 2 | Pasteur : rouvrir sans clôturer | Décision : le pasteur ne rouvre pas (#9) |
 | 3 | Pasteur et droits d'accès | Décision : réservé à l'administrateur, imposé par le serveur (#10) |
-| 4 | Coordonnées masquées par l'application seulement | Ouvert (#11) |
+| 4 | Coordonnées masquées par l'application seulement | Corrigé : table protégée par le serveur (#11) |
 | 5 | Pas de tests automatiques | Corrigé : analyse statique + 28 tests de sécurité du serveur à chaque envoi (#12) |
 | 6 | Conflits hors connexion : la dernière modification envoyée l'emporte | Comportement assumé (l'historique garde tout) |
 | 7 | Actions des fidèles refusées dans l'historique par le serveur (trouvé par les tests) | Corrigé |
