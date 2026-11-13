@@ -7,6 +7,7 @@ import { ROLES } from '../../lib/permissions';
 import { Avatar, BadgeRole, Champ, Confirmation, EnTete, Feuille, Icone, Interrupteur, LigneMenu, LogoEglise, SYMBOLE, lireImage } from '../../components/ui';
 import { sonActif, activerSon, jouer } from '../../lib/son';
 import { notifActives, activerNotif, demanderPermission } from '../../lib/notifications';
+import { MenuPlus } from '../../components/Menu';
 import { ficheDuCompte, structuresDuFidele, postesDuFidele } from '../../lib/structures';
 
 export function Plus() {
@@ -24,62 +25,8 @@ export function Plus() {
         <BadgeRole role={user.role} />
       </button>
 
-      <h3 className="menu-titre">Navigation</h3>
-      <div className="menu">
-        <LigneMenu icone="Church" titre="Accueil" texte="Soldes, caisses, membres" onClick={() => nav('/')} />
-        {can('fin.voir_details') && <LigneMenu icone="List" titre="Opérations" texte="Recettes et dépenses" onClick={() => nav('/operations')} />}
-        {can('msg.utiliser') && <LigneMenu icone="MessageCircle" titre="Messages" texte="Discussions, groupes et annonces" couleur="#0E9F6E" onClick={() => nav('/messages')} />}
-        {can('fin.rapports') && <LigneMenu icone="BarChart3" titre="Rapports" texte="Synthèses, graphiques, PDF" onClick={() => nav('/rapports')} />}
-        <LigneMenu icone="Users" titre="Fidèles" texte="Fiches et appartenances" couleur="#0E9F6E" onClick={() => nav('/fideles')} />
-        <LigneMenu icone="Network" titre="Structures" texte="Membres et bureaux" couleur="#7A4FD6" onClick={() => nav('/structures')} />
-        <LigneMenu icone="CalendarDays" titre="Activités" texte="À venir, en cours, terminées" couleur="#D9475A" onClick={() => nav('/activites')} />
-        <LigneMenu icone="Bell" titre="Notifications" couleur="#C98A06" onClick={() => nav('/notifications')} />
-      </div>
+      <MenuPlus aller={(to) => nav(to)} ouvrirEglises={() => window.dispatchEvent(new Event('e360:mes-eglises'))} deconnexion={() => setDeco(true)} />
 
-      <h3 className="menu-titre">Finances</h3>
-      <div className="menu">
-        {can('fin.voir_details') && <LigneMenu icone="LockKeyhole" titre="Clôtures mensuelles" texte="Arrêter les comptes de chaque mois" couleur="#7A4FD6" onClick={() => nav('/clotures')} />}
-        {can('fin.rapports') && <LigneMenu icone="BarChart3" titre="Rapports" texte="Synthèses, graphiques, PDF" onClick={() => nav('/rapports')} />}
-        {can('fin.transferer') && <LigneMenu icone="ArrowLeftRight" titre="Transfert entre caisses" couleur="#2D8CF0" onClick={() => nav('/transfert')} />}
-        {can('admin.eglise') && <LigneMenu icone="History" titre="Historique" texte="Toutes les actions tracées" couleur="#5B6B86" onClick={() => nav('/historique')} />}
-        {(can('admin.eglise') || can('fin.supprimer')) && <LigneMenu icone="Trash2" titre="Corbeille" texte="Restaurer un élément supprimé" couleur="#D9475A" onClick={() => nav('/corbeille')} />}
-      </div>
-
-      {admin && (
-        <>
-          <h3 className="menu-titre">Administration</h3>
-          <div className="menu">
-            {can('admin.caisses') && <LigneMenu icone="Wallet" titre="Caisses" texte="Créer, modifier, archiver" onClick={() => nav('/admin/caisses')} />}
-            {can('admin.categories') && <LigneMenu icone="Tags" titre="Catégories" texte="Recettes et dépenses" couleur="#C98A06" onClick={() => nav('/admin/categories')} />}
-            {can('admin.utilisateurs') && <LigneMenu icone="UserCog" titre="Utilisateurs et rôles" texte="Attribuer les caisses aux gestionnaires" couleur="#0E9F6E" onClick={() => nav('/admin/utilisateurs')} />}
-            {can('admin.droits') && <LigneMenu icone="ShieldCheck" titre="Droits d'accès" texte="Ce que chaque profil peut voir et faire" couleur="#D9475A" onClick={() => nav('/admin/droits')} />}
-            {can('admin.eglise') && <LigneMenu icone="Settings" titre="Paramètres de l'église" texte={eglise?.nom} couleur="#5B6B86" onClick={() => nav('/admin/eglise')} />}
-            {user.role === 'super_admin' && <LigneMenu icone="Building2" titre="Toutes les églises" texte="Administration de l’application" couleur="#0B2A66" onClick={() => nav('/admin/eglises')} />}
-          </div>
-        </>
-      )}
-
-      <h3 className="menu-titre">Modules</h3>
-      <div className="modules">
-        {MODULES.map((m) => (
-          <div key={m.cle} className={`module ${m.disponible ? '' : 'bientot'}`} role={m.lien ? 'button' : undefined} onClick={() => m.disponible && m.lien && nav(m.lien)}>
-            <span className="pastille" style={{ background: `${m.couleur}14`, color: m.couleur }}><Icone nom={m.icone} size={20} /></span>
-            <strong>{m.titre}</strong>
-            <small>{m.disponible ? m.texte : 'Bientôt disponible'}</small>
-          </div>
-        ))}
-      </div>
-
-      <div className="menu">
-        <LigneMenu icone="LifeBuoy" titre="Aide" texte="Questions fréquentes" couleur="#0E9F6E" onClick={() => nav('/aide')} />
-        <LigneMenu icone="Info" titre="À propos" texte="Version 1.0" couleur="#5B6B86" onClick={() => nav('/a-propos')} />
-        <LigneMenu icone="LogOut" titre="Se déconnecter" couleur="#D9475A" onClick={() => setDeco(true)} droite={<span />} />
-      </div>
-      <div className="pied-app">
-        <img src={SYMBOLE} alt="" width="36" height="36" />
-        <strong>Mon Église</strong>
-        <small>Toute votre église à portée de main · version 1.0</small>
-      </div>
       <Confirmation ouverte={deco} onFermer={() => setDeco(false)} titre="Se déconnecter ?" libelle="Se déconnecter" danger={!!(online && sync.attente)}
         message={online ? (sync.attente ? `${sync.attente} modification(s) n'ont pas encore été envoyées. Connectez-vous à internet avant de vous déconnecter pour ne rien perdre.` : 'Les données seront retirées de ce téléphone. Elles restent en sécurité sur le serveur.') : 'Vos données restent enregistrées sur l\'appareil.'}
         onConfirmer={async () => { await actions.deconnexion(); nav('/connexion', { replace: true }); }} />
@@ -166,7 +113,7 @@ export function AdminEglise() {
       <h3 className="menu-titre">Contrôle des opérations</h3>
       <div className="carte-form">
         <Interrupteur label="Validation des opérations par le pasteur" aide="Les saisies restent « à valider » jusqu'à la validation. Une opération validée ne se supprime plus : elle s'annule par contre-passation." actif={!!p.validation_pasteur} onChange={(v) => actions.majParametres({ validation_pasteur: v })} />
-        <Champ label="Réouverture d'un mois clôturé possible pendant" aide="Au-delà, seul le administrateur de l’application peut rouvrir.">
+        <Champ label="Réouverture d'un mois clôturé possible pendant" aide="Au-delà, seul l’administrateur de l’application peut rouvrir.">
           <select value={p.delai_reouverture ?? 3} onChange={(e) => actions.majParametres({ delai_reouverture: Number(e.target.value) })}>
             {[1, 2, 3, 6, 12].map((n) => <option key={n} value={n}>{n} mois après la clôture</option>)}
           </select>

@@ -111,7 +111,7 @@ export function AdminUtilisateurs() {
   const [edition, setEdition] = useState(null);
   const [mdpTemp, setMdpTemp] = useState(null);
   const caisses = caissesEglise(db, egliseId);
-  // Les demandes des pasteurs sont validées par le administrateur de l’application
+  // Les demandes des pasteurs sont validées par l’administrateur de l’application
   const attente = db.users.filter((u) => u.eglise_id === egliseId && u.statut === 'en_attente' && (moi.role === 'super_admin' || u.role !== 'pasteur'));
   const users = useMemo(() => db.users
     .filter((u) => u.eglise_id === egliseId && !['en_attente', 'refuse'].includes(u.statut) && (role === 'tous' || u.role === role) && `${u.prenom} ${u.nom} ${u.email}`.toLowerCase().includes(q.toLowerCase()))
@@ -156,7 +156,7 @@ export function AdminUtilisateurs() {
             <Avatar user={u} taille={42} />
             <span className="ligne-user-texte">
               <strong>{u.prenom} {u.nom}{u.id === moi.id ? ' (vous)' : ''}</strong>
-              <small>{u.role === 'gestionnaire' ? (caisses.filter((c) => u.caisses?.includes(c.id)).map((c) => c.nom).join(', ') || 'Aucune caisse attribuée') : u.email}</small>
+              <small>{u.role === 'fidele' ? 'Fidèle' : `Fidèle · ${ROLES[u.role]?.label}`}{u.role === 'gestionnaire' ? ` · ${caisses.filter((c) => u.caisses?.includes(c.id)).map((c) => c.nom).join(', ') || 'aucune caisse attribuée'}` : ''}</small>
             </span>
             {u.actif ? <BadgeRole role={u.role} /> : <span className="badge">Désactivé</span>}
           </button>

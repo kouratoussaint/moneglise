@@ -40,6 +40,9 @@ language sql stable security definer set search_path = public as $$
   select * from enregistrements
   where table_nom = 'users' and data->>'auth_id' = auth.uid()::text and not supprime
     and coalesce((data->>'actif')::boolean, true) and coalesce(data->>'statut', 'actif') = 'actif'
+    -- Église suspendue par l'administrateur de l'application : plus aucun accès pour ses membres
+    and (data->>'role' = 'super_admin' or not exists (select 1 from enregistrements e
+         where e.table_nom = 'eglises' and e.id = enregistrements.eglise_id and e.data->>'statut' = 'suspendue'))
 $$;
 
 create or replace function public.e360_super() returns boolean

@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../state/AppContext';
 import { useVue } from '../state/useVue';
+import { MenuTiroir } from './Menu';
 import { caissesEglise } from '../lib/finance';
 import { ROLES } from '../lib/permissions';
 import { MODULES } from '../modules/registre';
@@ -91,6 +92,7 @@ function Tiroir({ ouvert, fermer }) {
   const loc = useLocation();
   const [deco, setDeco] = useState(false);
   const [eglises, setEglises] = useState(false);
+  useEffect(() => { const o = () => setEglises(true); window.addEventListener('e360:mes-eglises', o); return () => window.removeEventListener('e360:mes-eglises', o); }, []);
   const adhesionsAttente = can('admin.utilisateurs') ? db.users.filter((u) => u.eglise_id === egliseId && u.statut === 'en_attente').length : 0;
   const eglisesAttente = user?.role === 'super_admin' ? db.eglises.filter((e) => e.statut === 'en_attente').length : 0;
   const nonLues = notifs.filter((n) => !n.lu).length;
@@ -124,49 +126,7 @@ function Tiroir({ ouvert, fermer }) {
         </div>
         <div className="tiroir-corps">
           <EtatSync />
-          <nav>
-            <Lien to="/" icone={Home} l="Accueil" />
-            {can('msg.utiliser') && <Lien to="/messages" icone={MessageCircle} l={`Messages${msgNonLus ? ` (${msgNonLus})` : ''}`} />}
-            {voitDetailMenu && <Lien to="/operations" icone={ListOrdered} l="Opérations" />}
-            <Lien to="/fideles" icone={Users} l="Fidèles" />
-            <Lien to="/structures" icone={Network} l="Structures" />
-            <Lien to="/activites" icone={CalendarDays} l="Activités" />
-            {voitDetailMenu && <Lien to="/rapports" icone={BarChart3} l="Rapports" />}
-            {can('fin.voir_details') && <Lien to="/clotures" icone={LockKeyhole} l="Clôtures mensuelles" />}
-            {can('fin.transferer') && <Lien to="/transfert" icone={ArrowLeftRight} l="Transfert entre caisses" />}
-          </nav>
-          {admin && (
-            <nav>
-              <h4>Administration</h4>
-              {can('admin.caisses') && <Lien to="/admin/caisses" icone={Wallet} l="Caisses" />}
-              {can('admin.categories') && <Lien to="/admin/categories" icone={Tags} l="Catégories" />}
-              {can('admin.eglise') && (eglise?.configuree
-                ? <Lien to="/admin/eglise" icone={Settings} l="Paramètres de l'église" />
-                : <Lien to="/configuration" icone={Settings2} l="Assistant de configuration" />)}
-              {can('admin.eglise') && <Lien to="/historique" icone={History} l="Historique" />}
-              {can('admin.utilisateurs') && <Lien to="/admin/utilisateurs" icone={adhesionsAttente ? UserCheck : UserCog} l={`Utilisateurs et rôles${adhesionsAttente ? ` (${adhesionsAttente} à valider)` : ''}`} />}
-              {can('admin.droits') && <Lien to="/admin/droits" icone={ShieldCheck} l="Droits d'accès" />}
-              {(can('admin.eglise') || can('fin.supprimer')) && <Lien to="/corbeille" icone={Trash2} l="Corbeille" />}
-              {user.role === 'super_admin' && <Lien to="/admin/eglises" icone={Building2} l={`Toutes les églises${eglisesAttente ? ` (${eglisesAttente} à valider)` : ''}`} />}
-            </nav>
-          )}
-          <nav>
-            <h4>Modules</h4>
-            {MODULES.map((m) => (
-              <div key={m.cle} className={`tiroir-module ${m.disponible ? '' : 'bientot'}`} role={m.lien ? 'button' : undefined} onClick={() => m.disponible && m.lien && aller(m.lien)}>
-                <Icone nom={m.icone} size={18} /><span>{m.titre}</span>{!m.disponible && <small>Bientôt</small>}
-              </div>
-            ))}
-          </nav>
-          <nav>
-            <Lien to="/notifications" icone={Bell} l={`Notifications${nonLues ? ` (${nonLues})` : ''}`} />
-            <Lien to="/profil" icone={UserRound} l="Mon profil" />
-            <button className="tiroir-lien" onClick={() => { fermer(); setEglises(true); }}><Building size={20} /><span>Mes églises</span></button>
-            <Lien to="/aide" icone={LifeBuoy} l="Aide" />
-            <Lien to="/a-propos" icone={Info} l="À propos" />
-            {(admin || !online) && <Lien to="/serveur" icone={Server} l="Serveur de l'église" />}
-            <button className="tiroir-lien danger" onClick={() => { fermer(); setDeco(true); }}><LogOut size={20} /><span>Se déconnecter</span></button>
-          </nav>
+          <MenuTiroir aller={aller} actif={loc.pathname} ouvrirEglises={() => { fermer(); setEglises(true); }} deconnexion={() => { fermer(); setDeco(true); }} />
           <p className="tiroir-pied">Mon Église · version 1.0 · Toute votre église à portée de main</p>
         </div>
       </aside>

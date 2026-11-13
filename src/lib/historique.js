@@ -5,7 +5,7 @@
 import { uid, fcfa } from './format';
 
 const SUIVIES = ['conversations', 'operations', 'caisses', 'categories', 'structures', 'clotures', 'users', 'eglises', 'demandes', 'fideles', 'appartenances', 'postes', 'cotisations', 'paiements', 'activites'];
-const EN_CORBEILLE = ['operations', 'caisses', 'categories', 'structures', 'fideles', 'activites', 'cotisations', 'appartenances', 'postes', 'users', 'conversations', 'demandes'];
+const EN_CORBEILLE = ['operations', 'caisses', 'categories', 'structures', 'fideles', 'activites', 'cotisations', 'appartenances', 'postes', 'users', 'conversations', 'demandes', 'eglises'];
 const IGNORES = new Set(['modifie_le', 'modifie_par', 'cree_le', 'mdp', 'le', 'photo', 'vu_le']);
 
 export const ACTIONS = {
@@ -51,6 +51,7 @@ function actionModif(table, a, b) {
   }
   if (table === 'users' && a.role !== b.role) return 'changement_role';
   if (table === 'caisses' && a.actif !== false && b.actif === false) return 'archivage';
+  if (table === 'eglises' && a.statut !== b.statut && b.statut === 'suspendue') return 'archivage';
   if (table === 'demandes' && a.statut !== b.statut) return b.statut === 'acceptee' ? 'validation' : 'refus';
   if (table === 'activites' && a.statut !== b.statut && b.statut === 'annulee') return 'annulation';
   return 'modification';

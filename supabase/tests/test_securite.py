@@ -135,6 +135,12 @@ def tests():
     d = json.loads(json.dumps(e)); d['nom'] = 'E1 renommée'; d['droits']['fidele']['fin.voir_details'] = True
     verifier("#10 Pasteur : ne modifie pas les droits d'accès", ecrire('pasteur', 'eglises', 'e1', 'e1', d), False)
     verifier("#10 Administrateur : modifie les droits d'accès", ecrire('admin', 'eglises', 'e1', 'e1', {**d, 'droits': {**d['droits'], 'fidele': {**d['droits']['fidele'], 'fin.voir_details': False}}}), True)
+    # Console : église suspendue par l'administrateur de l'application
+    sql("update enregistrements set data = data || '{\"statut\": \"suspendue\"}' where table_nom = 'eglises' and id = 'e2'")
+    verifier("Église suspendue : ses membres ne lisent plus rien", ids('externe', 'fideles'), [])
+    verifier("Église suspendue : ses membres n'écrivent plus rien", ecrire('externe', 'fideles', 'f_x', 'e2', {'prenom': 'X'}), False)
+    sql("update enregistrements set data = data || '{\"statut\": \"actif\"}' where table_nom = 'eglises' and id = 'e2'")
+    verifier("Église réactivée : accès rétabli", ids('externe', 'fideles'), ['f_u_externe'])
     # #9 Pasteur et réouverture
     verifier("#9 Pasteur : ne rouvre pas un mois", comme('pasteur', "update enregistrements set supprime = true where table_nom = 'clotures' and id = 'cl_eg'")[0] and
              sql("select supprime from enregistrements where table_nom = 'clotures' and id = 'cl_eg'")[0][0], False)

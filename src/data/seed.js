@@ -101,7 +101,7 @@ export function seed() {
     // Une demande d'adhésion en attente de validation par l'administrateur
     { id: 'u_attente', eglise_id: e1.id, prenom: 'Moussa', nom: 'Ilboudo', email: 'moussa@demo.bf', mdp, role: 'fidele', caisses: [], actif: true, statut: 'en_attente', le: today() },
   ];
-  // Une église inscrite, en attente de validation par le administrateur de l’application
+  // Une église inscrite, en attente de validation par l’administrateur de l’application
   const e3 = nouvelleEglise('egl_bethel', 'Église Béthel', 'Koudougou', 'en_attente');
   users.push({ id: 'u_admin3', eglise_id: e3.id, prenom: 'Rachel', nom: 'Yaméogo', email: 'admin@bethel.bf', mdp, role: 'admin', caisses: [], actif: true });
 

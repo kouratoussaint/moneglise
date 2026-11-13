@@ -53,7 +53,7 @@ export function Notifications() {
 const AIDE = [
   { theme: 'Premiers pas', q: [
     ['Comment créer mon église ?', 'Sur l\'écran de connexion, touchez « Créer un compte », puis « Inscrire mon église ». Vous devenez l\'administrateur et quatre caisses de départ sont créées : Caisse Église, VIMAB, Construction et Dîmes des diacres. Vous pouvez les renommer ou les supprimer.'],
-    ['Comment ajouter les responsables (pasteur, gestionnaires) ?', 'Menu › Utilisateurs et rôles › bouton +. Indiquez l\'adresse e-mail, le rôle et, pour un gestionnaire, ses caisses. La personne crée ensuite son compte avec cette même adresse : elle reçoit automatiquement son rôle.'],
+    ['Comment ajouter les responsables (pasteur, gestionnaires) ?', 'Menu › Comptes et responsabilités › bouton +. Indiquez l\'adresse e-mail, le rôle et, pour un gestionnaire, ses caisses. La personne crée ensuite son compte avec cette même adresse : elle reçoit automatiquement son rôle.'],
     ['Comment un fidèle rejoint-il l\'église ?', 'Il crée un compte en choisissant « Rejoindre mon église ». Il voit alors les totaux des caisses, sans le détail des opérations.'],
   ] },
   { theme: 'Recettes et dépenses', q: [

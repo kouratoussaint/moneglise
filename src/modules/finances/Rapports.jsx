@@ -87,7 +87,7 @@ export function Clotures() {
                 )}
                 {cl && peutTraiter && (possible
                   ? <button className="btn btn-doux btn-plein" onClick={() => setConfirm({ type: 'rouvrir', ym })}><LockOpen size={18} /> Rouvrir ce mois</button>
-                  : <p className="texte-doux petit">Délai de réouverture dépassé : seul le administrateur de l’application peut rouvrir ce mois.</p>)}
+                  : <p className="texte-doux petit">Délai de réouverture dépassé : seul l’administrateur de l’application peut rouvrir ce mois.</p>)}
                 {cl && !peutTraiter && can('fin.cloturer', c.id) && (enAttente(ym)
                   ? <p className="alerte"><Hourglass size={16} /> Demande envoyée, en attente.{enAttente(ym).demandeur === user.id && <button className="lien" onClick={() => { const r = actions.annulerDemande(enAttente(ym).id); notifier('Demande annulée', 'ok', 'tic', { annuler: () => actions.restaurer(r.corbeille) }); }}> Annuler</button>}</p>
                   : <button className="btn btn-doux btn-plein" onClick={() => { setDemande(ym); setMotif(''); }}><LockOpen size={18} /> Demander la réouverture</button>)}

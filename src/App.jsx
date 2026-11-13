@@ -15,6 +15,7 @@ import { ListeMessages, Conversation } from './modules/messages/Messages';
 import Configuration from './modules/admin/Configuration';
 import Import from './modules/finances/Import';
 import { Historique, Corbeille } from './modules/admin/Historique';
+import Console from './modules/console/Console';
 import { ListeFideles, FicheFidele } from './modules/membres/Fideles';
 import { ListeStructures, DetailStructure } from './modules/structures/Structures';
 import { SuiviCotisation } from './modules/structures/CaisseStructure';
@@ -71,7 +72,8 @@ export default function App() {
             <Route path="admin/utilisateurs" element={<Garde droit="admin.utilisateurs"><AdminUtilisateurs /></Garde>} />
             <Route path="admin/droits" element={<Garde droit="admin.droits"><AdminDroits /></Garde>} />
             <Route path="admin/eglise" element={<Garde droit="admin.eglise"><AdminEglise /></Garde>} />
-            <Route path="admin/eglises" element={<GardeSuper><SuperEglises /></GardeSuper>} />
+            <Route path="admin/eglises" element={<Navigate to="/console?onglet=eglises" replace />} />
+            <Route path="console" element={<GardeSuper><Console /></GardeSuper>} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

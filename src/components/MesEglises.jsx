@@ -48,14 +48,14 @@ export default function MesEglises({ ouverte, onFermer }) {
           {/* Seuls les pasteurs peuvent suivre plusieurs églises */}
           {mesAdhesions.some((a) => a.role === 'pasteur') && (
             <div className="actions-liste">
-              <button onClick={() => setMode('rejoindre')}><LogIn size={20} /><span>Rejoindre une autre église<small>Comme pasteur ; le administrateur de l’application validera votre demande</small></span></button>
-              <button onClick={() => setMode('creer')}><Plus size={20} /><span>Inscrire une nouvelle église<small>Validation par le administrateur de l’application</small></span></button>
+              <button onClick={() => setMode('rejoindre')}><LogIn size={20} /><span>Rejoindre une autre église<small>Comme pasteur ; l’administrateur de l’application validera votre demande</small></span></button>
+              <button onClick={() => setMode('creer')}><Plus size={20} /><span>Inscrire une nouvelle église<small>Validation par l’administrateur de l’application</small></span></button>
             </div>
           )}
         </div>
       )}
       {mode === 'rejoindre' && (
-        <Champ label="Église à rejoindre" aide={liste === null ? 'Chargement…' : 'Vous y serez inscrit comme pasteur après validation par le administrateur de l’application.'}>
+        <Champ label="Église à rejoindre" aide={liste === null ? 'Chargement…' : 'Vous y serez inscrit comme pasteur après validation par l’administrateur de l’application.'}>
           <select value={choix} onChange={(e) => setChoix(e.target.value)}>
             <option value="">Choisir…</option>
             {(liste || []).filter((e) => !miennes.has(e.id)).map((e) => <option key={e.id} value={e.id}>{e.nom}{e.ville ? ` — ${e.ville}` : ''}</option>)}
@@ -67,7 +67,7 @@ export default function MesEglises({ ouverte, onFermer }) {
           <Segmente valeur="creer" onChange={() => {}} options={[{ v: 'creer', l: 'Nouvelle église' }]} />
           <Champ label="Nom de l'église"><input value={f.nom} onChange={(e) => setF({ ...f, nom: e.target.value })} /></Champ>
           <Champ label="Ville"><input value={f.ville} onChange={(e) => setF({ ...f, ville: e.target.value })} /></Champ>
-          <p className="texte-doux petit">L'inscription sera validée par le administrateur de l’application. Vous pourrez la configurer en attendant.</p>
+          <p className="texte-doux petit">L'inscription sera validée par l’administrateur de l’application. Vous pourrez la configurer en attendant.</p>
         </div>
       )}
     </Feuille>

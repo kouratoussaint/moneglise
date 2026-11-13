@@ -103,7 +103,7 @@ export function makeCan(user, eglise, db) {
     // Caisse d'une structure : le poste occupé dans son bureau donne les droits sur cette caisse
     const caisse = caisseId && db?.caisses?.find((c) => c.id === caisseId);
     if (caisse?.structure_id && user.role !== 'super_admin' && droitCaisseStructure(db, user, caisse, cle)) return true;
-    if (user.role === 'super_admin') return true; // le administrateur de l’application a tous les droits
+    if (user.role === 'super_admin') return true; // l’administrateur de l’application a tous les droits
     // Les pasteurs configurent l'église au même titre que l'administrateur
     if (user.role === 'pasteur' && CONFIG.includes(cle)) return true;
     // Les droits absents d'une ancienne matrice prennent leur valeur par défaut

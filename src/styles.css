@@ -1021,3 +1021,15 @@ button.carte-config { width: 100%; text-align: left; }
 .stats-dont { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
 .stats-dont > small { font-size: .74rem; font-weight: 600; color: var(--doux); }
 .stats-dont .stat-role small { white-space: normal; line-height: 1.15; font-size: .7rem; }
+
+/* ---------- Console d'administration ---------- */
+.onglets-console button { font-size: .8rem; padding: 0 6px; }
+.console-kpis { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.console-kpi { display: flex; flex-direction: column; gap: 2px; padding: 12px; border-radius: var(--r-l); background: var(--surface); box-shadow: var(--ombre); min-width: 0; }
+.console-kpi > span { width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; color: var(--c); background: color-mix(in srgb, var(--c) 12%, white); margin-bottom: 4px; }
+.console-kpi strong { font-size: 1.35rem; color: var(--navy); font-variant-numeric: tabular-nums; }
+.console-kpi small { font-size: .78rem; font-weight: 600; color: var(--encre); }
+.console-kpi em { font-style: normal; font-size: .7rem; color: var(--doux); line-height: 1.3; }
+.bouton-alerte { width: 100%; text-align: left; cursor: pointer; }
+.tiroir-badge { margin-left: auto; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 99px; background: var(--rouge); color: #fff; font-size: .7rem; display: grid; place-items: center; }
+.ligne-menu.bientot { opacity: .55; }

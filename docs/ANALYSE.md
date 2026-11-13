@@ -116,7 +116,7 @@ Proposés par défaut selon l'intitulé : *Président* (détail, membres, bureau
 
 | Profil | Barre du bas | Accueil | Écrans principaux |
 |---|---|---|---|
-| **Administrateur de l'application** | Accueil · Opérations · + · Messages · Rapports · Plus | Accueil complet de l'église consultée, raccourcis structures, toutes les structures | Tout, plus **Toutes les églises** (validation des églises et des pasteurs) |
+| **Administrateur de l'application** | Accueil · Opérations · + · Messages · Rapports · Plus | Accueil complet de l'église consultée, raccourcis structures, toutes les structures | Tout, plus la **Console d'administration** : tableau de bord de la plateforme, églises (valider, entrer, modifier, suspendre, réactiver, supprimer), comptes de toutes les églises (responsabilité, activation, mot de passe temporaire), validations |
 | **Administrateur d'église** | Accueil · Opérations · Messages · Rapports · Plus | Solde, caisses, membres, graphiques, dernières opérations, raccourcis structures, prochaines activités, ses structures | Paramètres, assistant, caisses, catégories, utilisateurs, droits d'accès, historique, corbeille, clôtures, transferts, fidèles, structures, activités |
 | **Pasteur** | Accueil · Opérations · Messages · Rapports · Plus | Comme l'administrateur + **toutes les structures** | Idem administrateur, sauf droits d'accès et réouverture des mois ; validation des opérations |
 | **Gestionnaire** | Accueil · Opérations · + · Messages · Rapports · Plus | Accueil complet, ses structures | Saisie dans ses caisses, transferts, clôtures, demandes de réouverture, import Excel, rapports |
@@ -124,6 +124,11 @@ Proposés par défaut selon l'intitulé : *Président* (détail, membres, bureau
 | **Fidèle avec un poste** (ex. trésorier JAD) | Accueil · Opérations · + · Messages · Rapports · Plus | Comme ci-dessus | En plus : saisie, cotisations, catégories, clôture de la caisse de sa structure ; bureau ou membres selon le poste |
 | **Fidèle sans structure** | Accueil · Messages · Plus | **Activités de l'église d'abord**, invitation à rejoindre une structure, puis totaux de l'église | Fidèles, structures, activités, messagerie, profil |
 | **Inscrit en attente** | — | Écran « adhésion en attente » | Aucun accès avant validation |
+
+## Organisation des menus
+
+Le menu latéral et le menu Plus suivent la même organisation (`src/components/Menu.jsx`), chaque entrée une seule fois par menu :
+**Mon espace** (accueil, messages, notifications, profil, mes églises) · **Vie de l'église** (fidèles, structures, activités) · **Finances** (opérations, rapports, clôtures, transferts, import Excel) · **Administration de l'église** (paramètres, comptes et responsabilités, droits d'accès, caisses, catégories, historique, corbeille) · **Administration de l'application** (console) · **Bientôt** · **Application** (aide, à propos, serveur, déconnexion).
 
 ## 6. Constats de l'analyse
 

@@ -518,7 +518,7 @@ export function AppProvider({ children }) {
     // ---------- Suppressions (corbeille, restaurables) ----------
     supprimerFidele(id) {
       const f = db.fideles.find((x) => x.id === id);
-      if (f?.user_id && db.users.some((u) => u.id === f.user_id)) return 'Cette personne a un compte : désactivez ou supprimez d\'abord son accès (Utilisateurs et rôles).';
+      if (f?.user_id && db.users.some((u) => u.id === f.user_id)) return 'Cette personne a un compte : désactivez ou supprimez d\'abord son accès (Comptes et responsabilités).';
       maj((d) => { d.fideles = d.fideles.filter((x) => x.id !== id); d.appartenances = d.appartenances.filter((a) => a.fidele_id !== id); return d; });
       return { corbeille: derniereCorbeille.current };
     },
@@ -758,6 +758,10 @@ export function AppProvider({ children }) {
     validerEglise(id, accepter) {
       maj((d) => { const e = d.eglises.find((x) => x.id === id); e.statut = accepter ? 'actif' : 'refuse'; e.valide_le = new Date().toISOString(); e.valide_par = user.id; return d; }, { vite: true });
     },
+    // ---------- Console de l'administrateur de l'application ----------
+    statutEglise(id, statut) { maj((d) => { const e = d.eglises.find((x) => x.id === id); e.statut = statut; e.statut_le = new Date().toISOString(); e.statut_par = user.id; return d; }, { vite: true }); },
+    modifierEgliseApp(id, patch) { maj((d) => { Object.assign(d.eglises.find((x) => x.id === id), patch); return d; }); },
+    supprimerEglise(id) { maj((d) => { d.eglises = d.eglises.filter((x) => x.id !== id); return d; }); return { corbeille: derniereCorbeille.current }; },
     validerMembre(id, accepter) {
       maj((d) => { const u = d.users.find((x) => x.id === id); u.statut = accepter ? 'actif' : 'refuse'; u.valide_le = new Date().toISOString(); u.valide_par = user.id; return d; }, { vite: true });
     },

@@ -30,7 +30,7 @@ export function MotDePasseOublie() {
     <div className="app"><main className="page formulaire">
       <EnTete titre="Mot de passe oublié" />
       {!online ? (
-        <p className="note"><KeyRound size={16} /><span>En mode démonstration, demandez à l'administrateur de votre église de vous donner un mot de passe temporaire (Utilisateurs et rôles).</span></p>
+        <p className="note"><KeyRound size={16} /><span>En mode démonstration, demandez à l'administrateur de votre église de vous donner un mot de passe temporaire (Comptes et responsabilités).</span></p>
       ) : etape === 'email' ? (
         <div className="pile carte-form">
           <p className="texte-doux">Indiquez l'adresse e-mail de votre compte : vous recevrez un code à 6 chiffres.</p>

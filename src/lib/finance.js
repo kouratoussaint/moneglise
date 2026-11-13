@@ -52,7 +52,7 @@ export const moisVisibleFidele = (db, eglise, caisseId, ym) => !eglise?.parametr
 // Une opération est « validée » quand son mois est clôturé, ou quand le pasteur l'a validée
 export const estValidee = (db, o) => o.statut === 'validee' || estVerrouille(db, o.caisse_id, o.date);
 
-// Réouverture : délai réglable par l'administrateur (3 mois par défaut) ; au-delà, seul le administrateur de l’application peut rouvrir
+// Réouverture : délai réglable par l'administrateur (3 mois par défaut) ; au-delà, seul l’administrateur de l’application peut rouvrir
 export function reouverturePossible(eglise, cloture, estSuper) {
   if (estSuper) return true;
   const delai = Number(eglise?.parametres?.delai_reouverture ?? 3);

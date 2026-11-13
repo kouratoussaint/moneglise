@@ -18,12 +18,14 @@ export default function EnAttente() {
       <div className="attente-carte">
         <LogoEglise eglise={eglise} taille={64} />
         <span className={`attente-icone ${refuse ? 'refuse' : ''}`}>{refuse ? <XCircle size={26} /> : <Hourglass size={26} />}</span>
-        {refuse ? (
+        {eglise?.statut === 'suspendue' ? (
+          <><h1>Église suspendue</h1><p>L'accès à <b>{nomEglise}</b> est momentanément suspendu par l'administrateur de l'application de Mon Église. Les données sont conservées. Contactez-le pour en savoir plus.</p></>
+        ) : refuse ? (
           <><h1>Demande non retenue</h1><p>{egliseAttente ? `L'inscription de ${nomEglise} n'a pas été validée.` : `Votre demande d'adhésion à ${nomEglise} n'a pas été acceptée.`} Contactez l'administrateur pour en savoir plus.</p></>
         ) : egliseAttente ? (
-          <><h1>Église en attente de validation</h1><p>L'inscription de <b>{nomEglise}</b> a bien été reçue. Le administrateur de l’application de Mon Église doit la valider avant que les membres puissent la rejoindre. En attendant, préparez sa configuration.</p></>
+          <><h1>Église en attente de validation</h1><p>L'inscription de <b>{nomEglise}</b> a bien été reçue. L’administrateur de l’application de Mon Église doit la valider avant que les membres puissent la rejoindre. En attendant, préparez sa configuration.</p></>
         ) : (
-          <><h1>Adhésion en attente</h1><p>Votre demande pour rejoindre <b>{nomEglise}</b> a été envoyée. {user.role === 'pasteur' ? 'Le administrateur de l’application de Mon Église' : 'L\'administrateur de l\'église'} doit la valider : vous serez prévenu dès que c'est fait.</p></>
+          <><h1>Adhésion en attente</h1><p>Votre demande pour rejoindre <b>{nomEglise}</b> a été envoyée. {user.role === 'pasteur' ? 'L’administrateur de l’application de Mon Église' : 'L\'administrateur de l\'église'} doit la valider : vous serez prévenu dès que c'est fait.</p></>
         )}
         <div className="pile">
           {egliseAttente && !refuse && user.role === 'admin' && <button className="btn btn-primaire btn-large" onClick={() => nav('/configuration')}><Settings2 size={18} /> Configurer mon église</button>}

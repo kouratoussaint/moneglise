@@ -154,7 +154,7 @@ function NouvelleDiscussion({ ouverte, onFermer }) {
   const [portee, setPortee] = useState(egliseId);
   useEffect(() => { if (ouverte) actions.rafraichirAnnuaire(); }, [ouverte]);
   // Contacts : membres de l'église ; pour l’administrateur de l’application, aussi les administrateurs des autres églises
-  // Le administrateur de l’application choisit une église (tous ses membres) ou « tous les administrateurs »
+  // L’administrateur de l’application choisit une église (tous ses membres) ou « tous les administrateurs »
   const contacts = personnes(db).filter((u) => u.id !== user.id && u.actif !== false && (u.statut || 'actif') === 'actif' && (estSuper
     ? (portee === '_admins' ? u.role === 'admin' : u.eglise_id === portee)
     : (u.eglise_id === user.eglise_id || (user.role === 'admin' && u.role === 'super_admin'))))

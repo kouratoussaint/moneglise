@@ -214,7 +214,7 @@ export default function Configuration() {
             </div>
           )}
           <p className="texte-doux petit">Chaque personne crée ensuite son compte avec son adresse e-mail et reçoit automatiquement son rôle.</p>
-          {user.role === 'admin' && eglise.statut === 'en_attente' && <p className="note"><PartyPopper size={16} /><span>Votre église est en attente de validation par le administrateur de l’application. Votre configuration sera prête dès la validation.</span></p>}
+          {user.role === 'admin' && eglise.statut === 'en_attente' && <p className="note"><PartyPopper size={16} /><span>Votre église est en attente de validation par l’administrateur de l’application. Votre configuration sera prête dès la validation.</span></p>}
         </div>
       )}
 
