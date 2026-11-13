@@ -159,6 +159,15 @@ export function FicheActivite() {
         <h2>{a.titre}</h2>
         <p>{structure ? <><Network size={14} /> {structure.nom}</> : 'Activité de l\'église'}{a.type ? ` · ${a.type}` : ''}</p>
       </div>
+      {a.programme_id && a.affectations && (
+        <section className="bloc bloc-liste">
+          <div className="bloc-tete"><h2>Personnes désignées</h2></div>
+          {Object.entries(a.affectations).map(([lid, fids]) => (
+            <div key={lid} className="ligne-affectation"><small>{(db.listes || []).find((l) => l.id === lid)?.nom || 'Liste'}</small>
+              <span>{fids.map((fid) => nomFidele((db.fideles || []).find((f) => f.id === fid))).join(', ') || '—'}</span></div>
+          ))}
+        </section>
+      )}
       <dl className="fiche">
         <div><dt><CalendarDays size={16} /> Début</dt><dd>{formatDebut(a)}</dd></div>
         {a.fin && <div><dt><Clock size={16} /> Fin</dt><dd>{fin.toLocaleString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</dd></div>}

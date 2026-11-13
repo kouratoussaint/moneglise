@@ -9,6 +9,7 @@ import { activitesVisibles, statutActivite } from '../../lib/activites';
 import { fidelesConcernes, situation } from '../../lib/cotisations';
 import { CarteActivite } from '../activites/Activites';
 import { LigneOperation } from './Operations';
+import { mesServices } from '../../lib/programmes';
 
 // Raccourcis vers les structures (accueil des responsables)
 export function RaccourcisStructures({ structures }) {
@@ -78,4 +79,27 @@ export function BlocActivites({ titre = 'Prochaines activités', eglise: seuleme
 
 export function EnteteSection({ titre, icone: I = Users }) {
   return <div className="separateur-section"><I size={16} /><span>{titre}</span></div>;
+}
+
+// Mes prochains services (programmes : chantre, prédicateur, accueil…)
+export function MesServices() {
+  const { db, user } = useApp();
+  const nav = useNavigate();
+  const fiche = ficheDuCompte(db, user?.id);
+  const liste = mesServices(db, fiche?.id).slice(0, 3);
+  if (!liste.length) return null;
+  return (
+    <section className="bloc mes-services">
+      <div className="bloc-tete"><h2>Vous servez bientôt</h2></div>
+      {liste.map(({ seance, listes }) => {
+        const d = new Date(`${seance.debut}:00`);
+        return (
+          <button key={seance.id} className="ligne-service" onClick={() => nav(`/activites/${seance.id}`)}>
+            <span className="ca-date"><b>{d.getDate()}</b><small>{d.toLocaleDateString('fr-FR', { month: 'short' }).replace('.', '')}</small></span>
+            <span className="ligne-user-texte"><strong>{seance.titre}</strong><small>{d.toLocaleDateString('fr-FR', { weekday: 'long' })} à {seance.debut.slice(11, 16)} · {listes.join(', ')}</small></span>
+          </button>
+        );
+      })}
+    </section>
+  );
 }

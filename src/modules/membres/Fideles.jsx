@@ -181,6 +181,12 @@ export function FicheFidele() {
         )}
       </section>
 
+      {(db.listes || []).some((l) => l.actif !== false && (l.fideles || []).includes(f.id)) && (
+        <section className="bloc">
+          <h2>Listes de service</h2>
+          <div className="puces enveloppe">{(db.listes || []).filter((l) => l.actif !== false && (l.fideles || []).includes(f.id)).map((l) => <span key={l.id} className="puce">{l.nom}</span>)}</div>
+        </section>
+      )}
       {can('admin.utilisateurs') && (
         <section className="bloc">
           <h2>Accès à l'application</h2>

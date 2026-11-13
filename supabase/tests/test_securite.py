@@ -156,6 +156,15 @@ def tests():
     verifier("#11 Un fidèle complète ses propres coordonnées", ecrire('membre', 'coordonnees', 'f_u_membre', 'e1', {'fidele_id': 'f_u_membre', 'telephone': '76000000'}), True)
     verifier("#11 Un fidèle lit ses propres coordonnées", 'f_u_membre' in (ids('membre', 'coordonnees') or []), True)
     verifier("#11 Un fidèle ne modifie pas celles d'un autre", ecrire('membre', 'coordonnees', 'f_sans', 'e1', {'fidele_id': 'f_sans', 'telephone': '0'}), False)
+    # Lot B : programmes et services
+    verifier("Programmes : le pasteur crée une liste", ecrire('pasteur', 'listes', 'l_chantres', 'e1', {'nom': 'Chantres', 'type': 'role', 'fideles': ['f_u_membre']}), True)
+    verifier("Programmes : le pasteur crée un programme", ecrire('pasteur', 'programmes', 'pg_culte', 'e1', {'nom': 'Culte', 'jour': 0}), True)
+    verifier("Programmes : un simple fidèle ne crée pas de liste", ecrire('membre', 'listes', 'l_x', 'e1', {'nom': 'X'}), False)
+    verifier("Programmes : un simple fidèle consulte les listes", 'l_chantres' in (ids('membre', 'listes') or []), True)
+    verifier("Programmes : le pasteur planifie une séance", ecrire('pasteur', 'activites', 'seance1', 'e1', {'programme_id': 'pg_culte', 'titre': 'Culte', 'debut': '2030-01-06T08:00', 'destinataires': 'liste', 'fideles': ['f_u_membre']}), True)
+    verifier("Programmes : un simple fidèle ne planifie pas", ecrire('membre', 'activites', 'seance2', 'e1', {'programme_id': 'pg_culte', 'titre': 'Culte', 'debut': '2030-01-13T08:00'}), False)
+    dest = [x[0] for x in sql("select e360_destinataires_activite('seance1')")]
+    verifier("Programmes : seules les personnes désignées sont prévenues", dest, ['u_membre'])
     # #9 Pasteur et réouverture
     verifier("#9 Pasteur : ne rouvre pas un mois", comme('pasteur', "update enregistrements set supprime = true where table_nom = 'clotures' and id = 'cl_eg'")[0] and
              sql("select supprime from enregistrements where table_nom = 'clotures' and id = 'cl_eg'")[0][0], False)

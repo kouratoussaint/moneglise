@@ -91,8 +91,8 @@ language sql stable security definer set search_path = public as $$
       from enregistrements e where e.table_nom = 'eglises' and e.id = eg
     ), (
       -- Valeurs par défaut des droits ajoutés après la création de l'église
-      '{"admin":{"msg.utiliser":true,"msg.prive":true,"msg.groupes":true,"msg.annonces":true},
-        "pasteur":{"msg.utiliser":true,"msg.prive":true,"msg.groupes":true,"msg.annonces":true},
+      '{"admin":{"msg.utiliser":true,"msg.prive":true,"msg.groupes":true,"msg.annonces":true,"prog.gerer":true},
+        "pasteur":{"msg.utiliser":true,"msg.prive":true,"msg.groupes":true,"msg.annonces":true,"prog.gerer":true},
         "gestionnaire":{"msg.utiliser":true,"msg.prive":true,"msg.groupes":true},
         "fidele":{"msg.utiliser":true,"msg.prive":true}}'::jsonb -> role ->> cle
     )::boolean, false)
@@ -217,7 +217,8 @@ language sql stable security definer set search_path = public as $$
     select f.id, f.data->>'user_id' as uid from enregistrements f, a
     where f.table_nom = 'fideles' and f.eglise_id = a.eglise_id and not f.supprime and coalesce(f.data->>'user_id', '') <> ''
       and (
-        (coalesce(a.data->>'destinataires', 'structure') = 'eglise' or coalesce(a.data->>'structure_id', '') = '')
+        (coalesce(a.data->>'destinataires', 'structure') = 'eglise'
+          or (coalesce(a.data->>'structure_id', '') = '' and coalesce(a.data->>'destinataires', '') <> 'liste'))
         or (coalesce(a.data->>'destinataires', 'structure') = 'structure' and exists (select 1 from enregistrements ap where ap.table_nom = 'appartenances' and not ap.supprime
               and ap.data->>'structure_id' = a.data->>'structure_id' and ap.data->>'fidele_id' = f.id and coalesce(ap.data->>'jusqu_au', '') = '' and coalesce(ap.data->>'statut', 'actif') = 'actif'))
         or coalesce((a.data->'fideles') ? f.id, false)
@@ -359,7 +360,10 @@ begin
       return rid = d->>'fidele_id' and (e360_gere_fideles(eg)
           or exists (select 1 from enregistrements f where f.table_nom = 'fideles' and f.id = rid and f.data->>'user_id' = any(mes)));
     when 'activites' then
-      return e360_config(eg) or (coalesce(d->>'structure_id', '') <> '' and e360_droit_poste(d->>'structure_id', 'activites'));
+      return e360_config(eg) or (coalesce(d->>'structure_id', '') <> '' and e360_droit_poste(d->>'structure_id', 'activites'))
+          -- séance d'un programme régulier (culte, prière…) : droit « Gérer les programmes et le planning »
+          or (coalesce(d->>'programme_id', '') <> '' and e360_droit('prog.gerer', eg));
+    when 'listes', 'programmes' then return e360_config(eg) or e360_droit('prog.gerer', eg);
     when 'appartenances' then
       return e360_config(eg) or e360_droit_poste(d->>'structure_id', 'membres')
           -- un fidèle peut demander à rejoindre une structure ; le président (ou le poste désigné) valide
@@ -404,6 +408,7 @@ create policy e360_lecture on public.enregistrements for select to authenticated
     when table_nom = 'presences' then e360_super() or eglise_id = any(e360_mes_eglises()) or data->>'role' = 'super_admin'
     when table_nom = 'notifications' then data->>'user_id' = any(e360_mes_ids())
     when table_nom = 'activites' then eglise_id = any(e360_mes_eglises()) and e360_activite_visible(eglise_id, data) or e360_super()
+    when table_nom in ('listes', 'programmes') then eglise_id = any(e360_mes_eglises()) or e360_super()
     when table_nom = 'coordonnees' then eglise_id = any(e360_mes_eglises()) and e360_voit_coordonnees(eglise_id, data->>'fidele_id') or e360_super()
     when table_nom = 'fideles' then eglise_id = any(e360_mes_eglises()) and e360_fidele_visible(eglise_id, id, data) or e360_super()
     when table_nom in ('appartenances', 'postes') then e360_super() or (eglise_id = any(e360_mes_eglises()) and (e360_config(eglise_id) or e360_droit('fin.voir_details', eglise_id)

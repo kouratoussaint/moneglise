@@ -16,7 +16,7 @@ import { ficheDuCompte, structuresDuFidele, postesDuFidele, fidelesEglise } from
 import { ROLES } from '../../lib/permissions';
 import { BarresMois } from './Graphiques';
 import { LigneOperation } from './Operations';
-import { RaccourcisStructures, BlocStructure, BlocActivites, EnteteSection } from './AccueilBlocs';
+import { RaccourcisStructures, BlocStructure, BlocActivites, EnteteSection, MesServices } from './AccueilBlocs';
 import { Church } from 'lucide-react';
 
 export default function Accueil() {
@@ -100,6 +100,7 @@ export default function Accueil() {
         <span className="haut-droite"><EtatSync compact /><IconeNotifs /></span>
       </div>
 
+      <MesServices />
       {avant}
 
       <section className="hero" style={{ backgroundImage: `url(${IMAGES.worship})` }}>

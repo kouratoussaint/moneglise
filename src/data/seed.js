@@ -1,3 +1,4 @@
+import { modeleProgrammes } from '../lib/programmes';
 import { MATRICE_DEFAUT } from '../lib/permissions';
 import { today, ymOf, addMonths } from '../lib/format';
 
@@ -252,10 +253,29 @@ export function seed() {
     op(e1.id, cid, 'depense', `${mois[4]}-20`, `${cid}_depense_0`, 'Transport sortie d\'évangélisation', 15000);
   });
 
+  // Programmes et services : listes de fidèles et programmes réguliers, quelques séances planifiées
+  const prog = modeleProgrammes(e1.id);
+  const membresListe = { chantres: ['f_u_fidele', 'f_demo_1', 'f_demo_9', 'f_demo_6'], predicateurs: ['f_u_pasteur', 'f_demo_0', 'f_demo_4'], coordonnateurs: ['f_u_admin', 'f_demo_2'],
+    interpretes: ['f_demo_3', 'f_demo_7'], enseignants: ['f_u_pasteur', 'f_demo_8'], accueil: ['f_demo_5', 'f_demo_9', 'f_u_tres'], parking: ['f_demo_2', 'f_demo_4', 'f_demo_6'],
+    nettoyage: ['f_demo_1', 'f_demo_3', 'f_demo_5'], sonorisation: ['f_u_vimab', 'f_demo_8'] };
+  db.listes = prog.listes.map((l) => ({ ...l, fideles: membresListe[l.id.split('_lst_')[1]] || [] }));
+  db.programmes = prog.programmes;
+  const lst = (k) => `${e1.id}_lst_${k}`;
+  const prochain = (jour) => { const d = new Date(); d.setHours(0, 0, 0, 0); while (d.getDay() !== jour) d.setDate(d.getDate() + 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+  const seance = (p, aff, theme) => {
+    const date = prochain(p.jour);
+    const designes = [...new Set(Object.values(aff).flat())];
+    return { id: `seance_${p.id}_${date}`, eglise_id: e1.id, structure_id: null, programme_id: p.id, titre: p.nom, type: p.nom, debut: `${date}T${p.heure}`, fin: `${date}T${p.fin}`, lieu: p.lieu,
+      theme, description: theme, affectations: aff, fideles: designes, responsables: designes, destinataires: 'liste', statut: 'programmee', rappels: [1440, 120] };
+  };
+  const [cellule, , culte] = prog.programmes;
+
   // Activités d'exemple (dates relatives à aujourd'hui)
   const quand = (jours, heure) => { const d = new Date(); d.setDate(d.getDate() + jours); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}T${heure}`; };
   const maintenant = new Date(); const hh = (h) => `${String((maintenant.getHours() + h + 24) % 24).padStart(2, '0')}:00`;
   db.activites = [
+    seance(cellule, { [lst('chantres')]: ['f_u_fidele', 'f_demo_1'], [lst('predicateurs')]: ['f_demo_0'], [lst('coordonnateurs')]: ['f_demo_2'], [lst('interpretes')]: ['f_demo_3'] }, 'La persévérance dans la prière'),
+    seance(culte, { [lst('chantres')]: ['f_demo_9', 'f_demo_6'], [lst('predicateurs')]: ['f_u_pasteur'], [lst('coordonnateurs')]: ['f_u_admin'], [lst('interpretes')]: ['f_demo_7'], [lst('enseignants')]: ['f_demo_8'], [lst('accueil')]: ['f_demo_5', 'f_u_tres'], [lst('parking')]: ['f_demo_4'], [lst('nettoyage')]: ['f_demo_1', 'f_demo_3'], [lst('sonorisation')]: ['f_u_vimab'] }, 'Marcher par la foi — 2 Corinthiens 5'),
     { id: 'act_culte', eglise_id: e1.id, structure_id: null, titre: 'Culte d\'action de grâce', type: 'Culte spécial', debut: quand(3, '08:30'), fin: quand(3, '12:00'), lieu: 'Temple principal', description: 'Culte de reconnaissance pour la fin de l\'année scolaire.', destinataires: 'eglise', statut: 'programmee', rappels: [1440, 120], responsables: ['f_u_pasteur'] },
     { id: 'act_rep', eglise_id: e1.id, structure_id: st(5), titre: 'Répétition de la chorale', type: 'Répétition', debut: quand(1, '18:00'), fin: quand(1, '20:00'), lieu: 'Salle 2', destinataires: 'structure', statut: 'programmee', rappels: [120], responsables: [] },
     { id: 'act_jad', eglise_id: e1.id, structure_id: st(0), titre: 'Réunion du bureau JAD', type: 'Réunion de bureau', debut: quand(0, hh(-1)), fin: quand(0, hh(1)), lieu: 'Bureau pastoral', destinataires: 'structure', statut: 'programmee', rappels: [60], responsables: ['f_demo_0'] },

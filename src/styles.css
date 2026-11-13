@@ -1045,3 +1045,28 @@ button.carte-config { width: 100%; text-align: left; }
 .modele-caisse > input { min-height: 40px; padding: 0 10px; border: 1.5px solid var(--trait); border-radius: 10px; }
 .modele-caisse .ligne-modele input:first-child { flex: 1; }
 .groupe-droits { margin-top: 12px; }
+
+/* ---------- Programmes et services ---------- */
+.carte-seance { padding: 12px; border-radius: var(--r-l); background: var(--surface); box-shadow: var(--ombre); border-left: 4px solid #CFD9E8; margin-bottom: 8px; }
+.carte-seance.planifiee { border-left-color: var(--or); }
+.cs-entete { display: flex; align-items: flex-start; gap: 10px; }
+.cs-entete > span:first-child { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.cs-entete small { display: flex; align-items: center; gap: 4px; font-size: .76rem; color: var(--doux); }
+.cs-etat { font-size: .7rem; font-weight: 700; padding: 3px 9px; border-radius: 99px; white-space: nowrap; }
+.cs-etat.a-planifier { background: #F1F4F9; color: var(--doux); }
+.cs-etat.incomplete { background: #FDF2D8; color: var(--or-fonce); }
+.cs-etat.complete { background: #E2F5EE; color: var(--vert); }
+.cs-theme { margin-top: 6px; font-size: .84rem; font-style: italic; color: var(--navy); }
+.cs-affectations { margin-top: 8px; display: grid; grid-template-columns: 1fr; gap: 3px; }
+.cs-affectations > div, .ligne-affectation { display: flex; justify-content: space-between; gap: 10px; font-size: .8rem; }
+.cs-affectations small, .ligne-affectation small { color: var(--doux); flex-shrink: 0; }
+.cs-affectations span, .ligne-affectation span { text-align: right; font-weight: 600; }
+.cs-affectations span.manque { color: var(--or-fonce); }
+.ligne-affectation { padding: 8px 4px; border-bottom: 1px solid #EEF1F6; }
+.cs-actions { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
+.ligne-besoin { display: grid; grid-template-columns: 1fr 64px 36px; gap: 6px; align-items: center; margin-bottom: 6px; }
+.ligne-besoin input { min-height: 40px; border: 1.5px solid var(--trait); border-radius: 10px; padding: 0 8px; }
+.marge-bas { margin-bottom: 6px; }
+.mes-services { border: 1.5px solid #F4D58A; background: #FFFBF0; }
+.ligne-service { width: 100%; display: flex; align-items: center; gap: 12px; padding: 8px 0; text-align: left; }
+.ligne-service + .ligne-service { border-top: 1px solid #F1E3BC; }

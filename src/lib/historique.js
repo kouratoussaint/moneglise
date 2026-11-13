@@ -4,7 +4,7 @@
 // Les éléments supprimés partent dans la corbeille et peuvent être restaurés.
 import { uid, fcfa } from './format';
 
-const SUIVIES = ['conversations', 'operations', 'caisses', 'categories', 'structures', 'clotures', 'users', 'eglises', 'demandes', 'fideles', 'appartenances', 'postes', 'cotisations', 'paiements', 'activites', 'coordonnees'];
+const SUIVIES = ['conversations', 'operations', 'caisses', 'categories', 'structures', 'clotures', 'users', 'eglises', 'demandes', 'fideles', 'appartenances', 'postes', 'cotisations', 'paiements', 'activites', 'coordonnees', 'listes', 'programmes'];
 const EN_CORBEILLE = ['operations', 'caisses', 'categories', 'structures', 'fideles', 'activites', 'cotisations', 'appartenances', 'postes', 'users', 'conversations', 'demandes', 'eglises'];
 const IGNORES = new Set(['modifie_le', 'modifie_par', 'cree_le', 'mdp', 'le', 'photo', 'vu_le']);
 
@@ -16,7 +16,7 @@ export const ACTIONS = {
 };
 export const TABLES_LIBELLES = {
   conversations: 'Discussion', operations: 'Opération', caisses: 'Caisse', categories: 'Catégorie', structures: 'Structure', clotures: 'Clôture',
-  users: 'Utilisateur', eglises: 'Église', demandes: 'Demande', fideles: 'Fidèle', appartenances: 'Appartenance', postes: 'Poste du bureau', cotisations: 'Cotisation', paiements: 'Paiement de cotisation', activites: 'Activité', coordonnees: 'Coordonnées', parametres: 'Paramètres de l\'application',
+  users: 'Utilisateur', eglises: 'Église', demandes: 'Demande', fideles: 'Fidèle', appartenances: 'Appartenance', postes: 'Poste du bureau', cotisations: 'Cotisation', paiements: 'Paiement de cotisation', activites: 'Activité', coordonnees: 'Coordonnées', listes: 'Liste', programmes: 'Programme', parametres: 'Paramètres de l\'application',
 };
 
 const court = (v) => {
@@ -42,7 +42,7 @@ export function libelleObjet(db, table, o) {
 
 const lienObjet = (table, o) => ({
   operations: `/operations/${o.id}`, caisses: `/caisses/${o.id}`, users: '/admin/utilisateurs', clotures: `/clotures?caisse=${o.caisse_id}`,
-  eglises: '/admin/eglise', categories: '/admin/categories', structures: `/structures/${o.id}`, demandes: '/clotures', activites: `/activites/${o.id}`, coordonnees: `/fideles/${o.fidele_id}`, fideles: `/fideles/${o.id}`, appartenances: `/structures/${o.structure_id}`, postes: `/structures/${o.structure_id}`,
+  eglises: '/admin/eglise', categories: '/admin/categories', structures: `/structures/${o.id}`, demandes: '/clotures', activites: `/activites/${o.id}`, coordonnees: `/fideles/${o.fidele_id}`, listes: '/programmes?onglet=listes', programmes: '/programmes?onglet=programmes', fideles: `/fideles/${o.id}`, appartenances: `/structures/${o.structure_id}`, postes: `/structures/${o.structure_id}`,
 }[table] || '/historique');
 
 function actionModif(table, a, b) {

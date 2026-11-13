@@ -5,6 +5,7 @@ import { TABLES, supabase, differences, ajouterAFile, pousser, tirer, fusionner,
 import { structuresModele } from '../data/seed';
 import { CATEGORIES_STRUCTURE } from '../lib/structures';
 import { repartir, libellePeriode } from '../lib/cotisations';
+import { modeleProgrammes } from '../lib/programmes';
 import { conversationsEglise } from '../data/seed';
 import { messagesDe, lectureDe, personne, nomCourt, titreConv, estMembre } from '../lib/messagerie';
 import { initialiserPush, firebaseActif } from '../lib/push';
@@ -594,6 +595,38 @@ export function AppProvider({ children }) {
     annulerDemande(id) { maj((d) => { d.demandes = d.demandes.filter((x) => x.id !== id); return d; }); return { corbeille: derniereCorbeille.current }; },
     modifierGroupe(id, patch) { maj((d) => { Object.assign(d.conversations.find((c) => c.id === id), patch); return d; }); },
     supprimerGroupe(id) { maj((d) => { d.conversations = d.conversations.filter((c) => c.id !== id); return d; }); return { corbeille: derniereCorbeille.current }; },
+    // ---------- Programmes et services ----------
+    // Listes et programmes de départ (identifiants stables : sans effet s'ils existent déjà)
+    initialiserProgrammes() {
+      const { listes, programmes } = modeleProgrammes(egliseId);
+      maj((d) => {
+        d.listes = d.listes || []; d.programmes = d.programmes || [];
+        for (const l of listes) if (!d.listes.some((x) => x.id === l.id)) d.listes.push(l);
+        for (const p of programmes) if (!d.programmes.some((x) => x.id === p.id)) d.programmes.push(p);
+        return d;
+      });
+    },
+    enregistrerListe(l) {
+      const id = l.id || uid('lst');
+      maj((d) => { d.listes = d.listes || []; const ex = d.listes.find((x) => x.id === id); if (ex) Object.assign(ex, l); else d.listes.push({ fideles: [], actif: true, ordre: d.listes.length, ...l, id, eglise_id: egliseId }); return d; });
+      return id;
+    },
+    enregistrerProgramme(p) {
+      const id = p.id || uid('prg');
+      maj((d) => { d.programmes = d.programmes || []; const ex = d.programmes.find((x) => x.id === id); if (ex) Object.assign(ex, p); else d.programmes.push({ besoins: [], actif: true, ordre: d.programmes.length, ...p, id, eglise_id: egliseId }); return d; });
+      return id;
+    },
+    // Planifie (ou met à jour) la séance d'un programme à une date : c'est une activité de l'église,
+    // visible par tous ; seules les personnes désignées sont prévenues et reçoivent les rappels
+    planifierSeance(programme, date, { affectations, theme, notes, id }) {
+      const designes = [...new Set(Object.values(affectations).flat().filter(Boolean))];
+      return actions.enregistrerActivite({
+        ...(id ? { id } : {}), programme_id: programme.id, structure_id: null, titre: programme.nom, type: programme.nom,
+        debut: `${date}T${programme.heure || '08:00'}`, fin: programme.fin ? `${date}T${programme.fin}` : '', lieu: programme.lieu || '',
+        description: theme || '', theme: theme || '', notes: notes || '', affectations, fideles: designes, responsables: designes,
+        destinataires: 'liste', rappels: [1440, 120],
+      });
+    },
     // ---------- Activités ----------
     enregistrerActivite(a) {
       const id = a.id || uid('act');

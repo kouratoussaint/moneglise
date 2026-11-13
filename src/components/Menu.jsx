@@ -2,7 +2,7 @@
 // chaque entrée une seule fois par menu
 import { ChevronRight, Home, MessageCircle, Bell, UserRound, Building, Users, Network, CalendarDays, ListOrdered, BarChart3,
   LockKeyhole, ArrowLeftRight, Upload, Settings, Settings2, UserCog, UserCheck, ShieldCheck, Wallet, Tags, History, Trash2,
-  LayoutDashboard, LifeBuoy, Info, Server, LogOut } from 'lucide-react';
+  LayoutDashboard, LifeBuoy, Info, Server, LogOut, CalendarClock } from 'lucide-react';
 import { useApp } from '../state/AppContext';
 import { useVue } from '../state/useVue';
 import { totalNonLus } from '../lib/messagerie';
@@ -34,6 +34,7 @@ export function useMenu({ ouvrirEglises, deconnexion }) {
       { to: '/fideles', icone: Users, l: 'Fidèles', couleur: '#0E9F6E' },
       { to: '/structures', icone: Network, l: 'Structures', couleur: '#7A4FD6' },
       { to: '/activites', icone: CalendarDays, l: 'Activités', couleur: '#D9475A' },
+      { to: '/programmes', icone: CalendarClock, l: 'Programmes et services', couleur: '#C98A06' },
     ] },
     { titre: 'Finances', entrees: [
       voitDetail && { to: '/operations', icone: ListOrdered, l: 'Opérations' },
