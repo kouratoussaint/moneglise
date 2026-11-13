@@ -35,14 +35,26 @@ const CATEGORIES_MODELE = {
   },
 };
 
-// Crée les caisses et catégories de départ d'une nouvelle église (modèle modifiable par l'admin)
-export function modeleEglise(egliseId) {
+// Modèles de départ par défaut ; l'administrateur de l'application peut les remplacer (Console › Modèles)
+export function modelesParDefaut() {
+  return {
+    caisses: CAISSES_MODELE.map((m) => ({ ...m, categories: CATEGORIES_MODELE[m.cle] })),
+    structures: STRUCTURES_MODELE.map((s) => ({ ...s })),
+    droits: null,
+  };
+}
+
+// Crée les caisses et catégories de départ d'une nouvelle église (modèles de la console, sinon ceux par défaut)
+export function modeleEglise(egliseId, modeles) {
   const caisses = [], categories = [];
-  CAISSES_MODELE.forEach((m, i) => {
-    const id = `${egliseId}_c_${m.cle}`;
+  const liste = modeles?.caisses?.length ? modeles.caisses : CAISSES_MODELE;
+  liste.forEach((m, i) => {
+    const cle = m.cle || `c${i}`;
+    const cats = m.categories || CATEGORIES_MODELE[cle] || { recette: [], depense: [] };
+    const id = `${egliseId}_c_${cle}`;
     caisses.push({ id, eglise_id: egliseId, nom: m.nom, description: m.description, icone: m.icone, image: m.image, couleur: m.couleur, ordre: i, actif: true, visible_fideles: true });
     for (const type of ['recette', 'depense']) {
-      CATEGORIES_MODELE[m.cle][type].forEach((nom, j) => categories.push({ id: `${id}_${type}_${j}`, eglise_id: egliseId, caisse_id: id, type, nom }));
+      (cats[type] || []).forEach((nom, j) => categories.push({ id: `${id}_${type}_${j}`, eglise_id: egliseId, caisse_id: id, type, nom }));
     }
   });
   for (const type of ['recette', 'depense']) {
@@ -61,8 +73,15 @@ export function conversationsEglise(egliseId, par = null) {
   ];
 }
 
-export function nouvelleEglise(id, nom, ville, statut = 'actif') {
-  return { id, nom, ville, cree_le: today(), statut, configuree: statut === 'actif', droits: structuredClone(MATRICE_DEFAUT), parametres: { ...PARAMETRES_DEFAUT } };
+export function nouvelleEglise(id, nom, ville, statut = 'actif', modeles) {
+  return { id, nom, ville, cree_le: today(), statut, configuree: statut === 'actif', droits: droitsModele(modeles), parametres: { ...PARAMETRES_DEFAUT } };
+}
+
+// Droits de départ : ceux de la console (s'ils existent) complétés par les droits par défaut
+export function droitsModele(modeles) {
+  const d = structuredClone(MATRICE_DEFAUT);
+  for (const [r, v] of Object.entries(modeles?.droits || {})) d[r] = { ...(d[r] || {}), ...v };
+  return d;
 }
 
 export const STRUCTURES_MODELE = [
@@ -74,7 +93,8 @@ export const STRUCTURES_MODELE = [
   { nom: 'Chorale', description: 'Chantres et musiciens' },
   { nom: 'Diacres', description: 'Collège des diacres' },
 ];
-export const structuresModele = (egliseId) => STRUCTURES_MODELE.map((s, i) => ({ id: `${egliseId}_str_${i}`, eglise_id: egliseId, ...s, actif: true }));
+export const structuresModele = (egliseId, modeles) => (modeles?.structures?.length ? modeles.structures : STRUCTURES_MODELE)
+  .map((s, i) => ({ id: `${egliseId}_str_${i}`, eglise_id: egliseId, nom: s.nom, description: s.description || '', actif: true }));
 
 export function seed() {
   const r = rng(42);

@@ -1,9 +1,12 @@
 // Console d'administration de l'application (réservée à l'administrateur de l'application)
 import { useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Building2, Users, UserRound, Wallet, CalendarDays, Hourglass, Check, X, Search, LogIn, PauseCircle, PlayCircle, Pencil, Trash2, KeyRound, Activity, ShieldAlert } from 'lucide-react';
+import { Building2, Users, UserRound, Wallet, CalendarDays, Hourglass, Check, X, Search, LogIn, PauseCircle, PlayCircle, Pencil, Trash2, KeyRound, Activity, ShieldAlert, Info, Plus, Megaphone, Send, MessageCircle, Download, History } from 'lucide-react';
+import { modelesParDefaut } from '../../data/seed';
+import { lireApplication } from '../../lib/application';
+import { livrerFichier } from '../../lib/exporter';
 import { useApp } from '../../state/AppContext';
-import { ROLES, ROLES_EGLISE } from '../../lib/permissions';
+import { ROLES, ROLES_EGLISE, DROITS, MATRICE_DEFAUT } from '../../lib/permissions';
 import { totaux } from '../../lib/finance';
 import { statutActivite } from '../../lib/activites';
 import { fcfa, num, ymOf, dateFr } from '../../lib/format';
@@ -25,7 +28,7 @@ export default function Console() {
   const onglet = params.get('onglet') || 'tableau';
   const { db } = useApp();
   const aValider = db.eglises.filter((e) => e.statut === 'en_attente').length + db.users.filter((u) => u.statut === 'en_attente' && u.role === 'pasteur').length;
-  const ONGLETS = [['tableau', 'Tableau de bord'], ['eglises', 'Églises'], ['comptes', 'Comptes'], ['validations', 'Validations']];
+  const ONGLETS = [['tableau', 'Tableau de bord'], ['eglises', 'Églises'], ['comptes', 'Comptes'], ['validations', 'Validations'], ['modeles', 'Modèles'], ['communication', 'Communication'], ['parametres', 'Paramètres']];
   return (
     <div>
       <EnTete titre="Console d'administration" sousTitre="Administration de l'application Mon Église" />
@@ -40,6 +43,9 @@ export default function Console() {
       {onglet === 'eglises' && <Eglises />}
       {onglet === 'comptes' && <Comptes />}
       {onglet === 'validations' && <Validations />}
+      {onglet === 'modeles' && <Modeles />}
+      {onglet === 'communication' && <Communication />}
+      {onglet === 'parametres' && <ParametresApp />}
     </div>
   );
 }
@@ -108,7 +114,11 @@ function TableauDeBord() {
           </div>
         ))}
       </section>
-      <button className="btn btn-doux" onClick={() => nav('/historique')}>Historique des actions</button>
+      <div className="deux-col">
+        <button className="btn btn-doux" onClick={() => nav('/historique')}><History size={18} /> Historique</button>
+        <button className="btn btn-doux" onClick={() => nav('/corbeille')}><Trash2 size={18} /> Corbeille</button>
+      </div>
+      <p className="texte-doux petit centre">Historique et corbeille de toutes les églises.</p>
     </div>
   );
 }
@@ -177,6 +187,10 @@ function Eglises() {
               )}
               <button className="btn btn-primaire" onClick={() => entrer(ouverte)}><LogIn size={18} /> Entrer dans l'église et l'administrer</button>
               <button className="btn btn-doux" onClick={() => setEdition({ id: ouverte.id, nom: ouverte.nom, ville: ouverte.ville || '' })}><Pencil size={18} /> Modifier le nom et la ville</button>
+              <div className="deux-col">
+                <button className="btn btn-doux" onClick={async () => { await sauvegarderEglise(db, ouverte, 'xlsx'); notifier('Sauvegarde Excel prête'); }}><Download size={18} /> Sauvegarde Excel</button>
+                <button className="btn btn-doux" onClick={async () => { await sauvegarderEglise(db, ouverte, 'json'); notifier('Sauvegarde complète prête'); }}><Download size={18} /> Sauvegarde complète</button>
+              </div>
               {st === 'actif' && <button className="btn btn-doux" onClick={() => setConfirm({ type: 'suspendre', e: ouverte })}><PauseCircle size={18} /> Suspendre l'accès</button>}
               {(st === 'suspendue' || st === 'refuse') && <button className="btn btn-doux" onClick={() => { actions.statutEglise(ouverte.id, 'actif'); notifier(`${ouverte.nom} est de nouveau active`); }}><PlayCircle size={18} /> Réactiver</button>}
               {vide && st !== 'actif' && <button className="btn btn-danger-doux" onClick={() => setConfirm({ type: 'supprimer', e: ouverte })}><Trash2 size={18} /> Supprimer l'église</button>}
@@ -299,4 +313,182 @@ function Validations() {
       )}
     </div>
   );
+}
+
+// ---------- 5. Modèles des nouvelles églises ----------
+const lignes = (t) => t.split('\n').map((x) => x.trim()).filter(Boolean);
+function Modeles() {
+  const { db, actions, notifier } = useApp();
+  const enregistre = (db.parametres || []).find((p) => p.id === 'modeles')?.valeur;
+  const [m, setM] = useState(() => {
+    const base = enregistre || modelesParDefaut();
+    return { structures: base.structures.map((s) => ({ ...s })), caisses: base.caisses.map((c) => ({ ...c, rec: (c.categories?.recette || []).join('\n'), dep: (c.categories?.depense || []).join('\n') })), droits: base.droits || {} };
+  });
+  const [role, setRole] = useState('fidele');
+  const majS = (i, k, v) => setM({ ...m, structures: m.structures.map((s, j) => (j === i ? { ...s, [k]: v } : s)) });
+  const majC = (i, k, v) => setM({ ...m, caisses: m.caisses.map((c, j) => (j === i ? { ...c, [k]: v } : c)) });
+  const droitRole = (cle) => ({ ...MATRICE_DEFAUT[role], ...(m.droits[role] || {}) })[cle];
+  const enregistrer = () => {
+    const valeur = {
+      structures: m.structures.filter((s) => s.nom.trim()).map((s) => ({ nom: s.nom.trim(), description: (s.description || '').trim() })),
+      caisses: m.caisses.filter((c) => c.nom.trim()).map((c, i) => ({ cle: c.cle || `c${i}`, nom: c.nom.trim(), description: (c.description || '').trim(), icone: c.icone || 'Wallet', image: c.image || 'interieur', couleur: c.couleur || '#1F5FD6', categories: { recette: lignes(c.rec || ''), depense: lignes(c.dep || '') } })),
+      droits: m.droits,
+    };
+    actions.enregistrerParametreApp('modeles', valeur);
+    notifier('Modèles enregistrés : ils s\'appliqueront aux prochaines églises créées');
+  };
+  return (
+    <div className="pile">
+      <p className="note"><Info size={16} /><span>Ces modèles s'appliquent aux <b>nouvelles</b> églises (caisses, catégories, structures et droits de départ). Les églises existantes ne changent pas.</span></p>
+      <section className="bloc">
+        <div className="bloc-tete"><h2>Structures proposées</h2><button className="lien" onClick={() => setM({ ...m, structures: [...m.structures, { nom: '', description: '' }] })}><Plus size={16} /> Ajouter</button></div>
+        {m.structures.map((s, i) => (
+          <div key={i} className="ligne-modele">
+            <input value={s.nom} placeholder="Sigle" onChange={(e) => majS(i, 'nom', e.target.value)} />
+            <input value={s.description || ''} placeholder="Description" onChange={(e) => majS(i, 'description', e.target.value)} />
+            <button className="btn-icone petit" aria-label="Retirer" onClick={() => setM({ ...m, structures: m.structures.filter((_, j) => j !== i) })}><X size={16} /></button>
+          </div>
+        ))}
+      </section>
+      <section className="bloc">
+        <div className="bloc-tete"><h2>Caisses de départ</h2><button className="lien" onClick={() => setM({ ...m, caisses: [...m.caisses, { nom: '', description: '', rec: '', dep: '' }] })}><Plus size={16} /> Ajouter</button></div>
+        {m.caisses.map((c, i) => (
+          <div key={i} className="carte-form modele-caisse">
+            <div className="ligne-modele">
+              <input value={c.nom} placeholder="Nom de la caisse" onChange={(e) => majC(i, 'nom', e.target.value)} />
+              <button className="btn-icone petit" aria-label="Retirer" onClick={() => setM({ ...m, caisses: m.caisses.filter((_, j) => j !== i) })}><X size={16} /></button>
+            </div>
+            <input value={c.description || ''} placeholder="Description" onChange={(e) => majC(i, 'description', e.target.value)} />
+            <div className="deux-col">
+              <Champ label="Catégories de recettes (une par ligne)"><textarea rows={4} value={c.rec} onChange={(e) => majC(i, 'rec', e.target.value)} /></Champ>
+              <Champ label="Catégories de dépenses (une par ligne)"><textarea rows={4} value={c.dep} onChange={(e) => majC(i, 'dep', e.target.value)} /></Champ>
+            </div>
+          </div>
+        ))}
+      </section>
+      <section className="bloc">
+        <div className="bloc-tete"><h2>Droits d'accès de départ</h2></div>
+        <div className="puces defile">{ROLES_EGLISE.map((r) => <button key={r} className={`puce ${role === r ? 'active' : ''}`} onClick={() => setRole(r)}>{ROLES[r].label}</button>)}</div>
+        {DROITS.map((g) => (
+          <div key={g.groupe} className="groupe-droits">
+            <span className="champ-label">{g.groupe}</span>
+            {g.items.map((it) => <Interrupteur key={it.cle} label={it.label} actif={!!droitRole(it.cle)} onChange={(v) => setM({ ...m, droits: { ...m.droits, [role]: { ...(m.droits[role] || {}), [it.cle]: v } } })} />)}
+          </div>
+        ))}
+      </section>
+      <div className="deux-col">
+        <button className="btn btn-doux" onClick={() => { const b = modelesParDefaut(); setM({ structures: b.structures, caisses: b.caisses.map((c) => ({ ...c, rec: c.categories.recette.join('\n'), dep: c.categories.depense.join('\n') })), droits: {} }); notifier('Modèles d\'origine rétablis : enregistrez pour confirmer', 'ok', 'tic'); }}>Modèles d'origine</button>
+        <button className="btn btn-primaire" onClick={enregistrer}>Enregistrer</button>
+      </div>
+    </div>
+  );
+}
+
+// ---------- 6. Communication ----------
+const TITRE_GROUPE_ADMINS = 'Administrateurs des églises';
+function Communication() {
+  const { db, user, actions, notifier } = useApp();
+  const nav = useNavigate();
+  const actives = db.eglises.filter((e) => e.id !== '_global' && (e.statut || 'actif') === 'actif');
+  const [texte, setTexte] = useState('');
+  const [choix, setChoix] = useState(() => actives.map((e) => e.id));
+  const admins = db.users.filter((u) => u.role === 'admin' && u.actif !== false && (u.statut || 'actif') === 'actif');
+  const groupe = (db.conversations || []).find((c) => c.type === 'groupe' && c.titre === TITRE_GROUPE_ADMINS && c.cree_par === user.id);
+  const manquants = groupe ? admins.filter((u) => !groupe.membres.includes(u.id)) : [];
+  const envoyer = () => {
+    let n = 0;
+    for (const eid of choix) {
+      const conv = actions.convAnnonces(eid);
+      if (conv) { actions.envoyerMessage(conv, texte.trim()); n++; }
+    }
+    notifier(`Annonce publiée dans ${n} église${n > 1 ? 's' : ''}`);
+    setTexte('');
+  };
+  return (
+    <div className="pile">
+      <section className="bloc">
+        <div className="bloc-tete"><h2><Megaphone size={17} /> Annonce aux églises</h2></div>
+        <p className="texte-doux petit">Publiée dans le fil « Annonces » de chaque église choisie : tous ses membres la reçoivent, avec une notification.</p>
+        <Champ label="Message"><textarea rows={4} value={texte} onChange={(e) => setTexte(e.target.value)} placeholder="Ex. Une nouvelle version de l'application est disponible…" /></Champ>
+        <div className="puces enveloppe">
+          {actives.map((e) => <button key={e.id} type="button" className={`puce ${choix.includes(e.id) ? 'active' : ''}`} onClick={() => setChoix(choix.includes(e.id) ? choix.filter((x) => x !== e.id) : [...choix, e.id])}>{e.nom}</button>)}
+        </div>
+        <button className="btn btn-primaire" disabled={!texte.trim() || !choix.length} onClick={envoyer}><Send size={18} /> Publier dans {choix.length} église{choix.length > 1 ? 's' : ''}</button>
+      </section>
+      <section className="bloc">
+        <div className="bloc-tete"><h2><Users size={17} /> Discussion des administrateurs</h2></div>
+        <p className="texte-doux petit">Un groupe qui réunit les administrateurs de toutes les églises ({admins.length}) et vous.</p>
+        {groupe ? (
+          <>
+            {manquants.length > 0 && <button className="btn btn-doux" onClick={() => { actions.modifierGroupe(groupe.id, { membres: [...groupe.membres, ...manquants.map((u) => u.id)] }); notifier(`${manquants.length} administrateur(s) ajouté(s)`); }}>Ajouter les nouveaux administrateurs ({manquants.length})</button>}
+            <button className="btn btn-primaire" onClick={() => nav(`/messages/${groupe.id}`)}><MessageCircle size={18} /> Ouvrir la discussion</button>
+          </>
+        ) : (
+          <button className="btn btn-primaire" disabled={!admins.length} onClick={() => { const id = actions.creerGroupe(TITRE_GROUPE_ADMINS, admins.map((u) => u.id), 'groupe', '_global'); nav(`/messages/${id}`); }}><MessageCircle size={18} /> Créer la discussion</button>
+        )}
+      </section>
+    </div>
+  );
+}
+
+// ---------- 8. Paramètres de l'application ----------
+function ParametresApp() {
+  const { db, actions, notifier } = useApp();
+  const [a, setA] = useState(() => {
+    const v = lireApplication(db);
+    return { ...v, telephones: v.developpeur.telephones.join('\n') };
+  });
+  const dev = (k, v) => setA({ ...a, developpeur: { ...a.developpeur, [k]: v } });
+  const enregistrer = () => {
+    actions.enregistrerParametreApp('application', {
+      nom: a.nom.trim() || 'Mon Église', slogan: a.slogan.trim(),
+      developpeur: { ...a.developpeur, telephones: lignes(a.telephones) },
+      maintenance: a.maintenance,
+    });
+    notifier('Paramètres de l\'application enregistrés');
+  };
+  return (
+    <div className="pile">
+      <section className="bloc pile">
+        <h2>Identité</h2>
+        <Champ label="Nom de l'application"><input value={a.nom} onChange={(e) => setA({ ...a, nom: e.target.value })} /></Champ>
+        <Champ label="Slogan"><input value={a.slogan} onChange={(e) => setA({ ...a, slogan: e.target.value })} /></Champ>
+      </section>
+      <section className="bloc pile">
+        <h2>Développeur (affiché dans « À propos »)</h2>
+        <div className="deux-col">
+          <Champ label="Nom"><input value={a.developpeur.nom} onChange={(e) => dev('nom', e.target.value)} /></Champ>
+          <Champ label="Fonction"><input value={a.developpeur.role} onChange={(e) => dev('role', e.target.value)} /></Champ>
+        </div>
+        <Champ label="Téléphones (un par ligne)"><textarea rows={2} value={a.telephones} onChange={(e) => setA({ ...a, telephones: e.target.value })} /></Champ>
+        <div className="deux-col">
+          <Champ label="WhatsApp"><input value={a.developpeur.whatsapp} onChange={(e) => dev('whatsapp', e.target.value)} /></Champ>
+          <Champ label="E-mail"><input type="email" value={a.developpeur.email} onChange={(e) => dev('email', e.target.value)} /></Champ>
+        </div>
+      </section>
+      <section className="bloc pile">
+        <h2>Maintenance</h2>
+        <Interrupteur label="Mode maintenance" aide="Les utilisateurs voient un message d'information au lieu de l'application. Vous gardez l'accès." actif={!!a.maintenance.actif} onChange={(v) => setA({ ...a, maintenance: { ...a.maintenance, actif: v } })} />
+        <Champ label="Message affiché"><textarea rows={2} value={a.maintenance.message} onChange={(e) => setA({ ...a, maintenance: { ...a.maintenance, message: e.target.value } })} /></Champ>
+      </section>
+      <button className="btn btn-primaire" onClick={enregistrer}>Enregistrer</button>
+    </div>
+  );
+}
+
+// ---------- 9. Sauvegarde d'une église ----------
+const TABLES_SAUVEGARDE = [['eglises', 'Église'], ['fideles', 'Fidèles'], ['users', 'Comptes'], ['structures', 'Structures'], ['appartenances', 'Appartenances'], ['postes', 'Bureaux'],
+  ['caisses', 'Caisses'], ['categories', 'Catégories'], ['operations', 'Opérations'], ['clotures', 'Clôtures'], ['cotisations', 'Cotisations'], ['paiements', 'Paiements'], ['activites', 'Activités']];
+const aplatir = (o) => Object.fromEntries(Object.entries(o).filter(([k]) => !['mdp', 'photo', 'image', 'logo'].includes(k)).map(([k, v]) => [k, v && typeof v === 'object' ? JSON.stringify(v) : v]));
+export async function sauvegarderEglise(db, e, format) {
+  const donnees = Object.fromEntries(TABLES_SAUVEGARDE.map(([t]) => [t, (db[t] || []).filter((x) => (t === 'eglises' ? x.id === e.id : x.eglise_id === e.id)).map((x) => { const { mdp, ...r } = x; return r; })]));
+  const base = `sauvegarde_${e.nom.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w-]+/g, '_')}_${new Date().toISOString().slice(0, 10)}`;
+  if (format === 'json') {
+    await livrerFichier(new Blob([JSON.stringify({ application: 'Mon Église', date: new Date().toISOString(), eglise: e.id, donnees }, null, 1)], { type: 'application/json' }), `${base}.json`);
+    return;
+  }
+  const XLSX = await import('xlsx');
+  const wb = XLSX.utils.book_new();
+  for (const [t, l] of TABLES_SAUVEGARDE) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(donnees[t].map(aplatir).length ? donnees[t].map(aplatir) : [{ vide: '' }]), l.slice(0, 31));
+  await livrerFichier(new Blob([XLSX.write(wb, { bookType: 'xlsx', type: 'array' })], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `${base}.xlsx`);
 }

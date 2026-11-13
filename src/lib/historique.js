@@ -16,7 +16,7 @@ export const ACTIONS = {
 };
 export const TABLES_LIBELLES = {
   conversations: 'Discussion', operations: 'Opération', caisses: 'Caisse', categories: 'Catégorie', structures: 'Structure', clotures: 'Clôture',
-  users: 'Utilisateur', eglises: 'Église', demandes: 'Demande', fideles: 'Fidèle', appartenances: 'Appartenance', postes: 'Poste du bureau', cotisations: 'Cotisation', paiements: 'Paiement de cotisation', activites: 'Activité',
+  users: 'Utilisateur', eglises: 'Église', demandes: 'Demande', fideles: 'Fidèle', appartenances: 'Appartenance', postes: 'Poste du bureau', cotisations: 'Cotisation', paiements: 'Paiement de cotisation', activites: 'Activité', parametres: 'Paramètres de l\'application',
 };
 
 const court = (v) => {

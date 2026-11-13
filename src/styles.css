@@ -1033,3 +1033,15 @@ button.carte-config { width: 100%; text-align: left; }
 .bouton-alerte { width: 100%; text-align: left; cursor: pointer; }
 .tiroir-badge { margin-left: auto; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 99px; background: var(--rouge); color: #fff; font-size: .7rem; display: grid; place-items: center; }
 .ligne-menu.bientot { opacity: .55; }
+.eh-eglise { display: block; font-size: .7rem !important; font-weight: 700; color: var(--bleu) !important; }
+.onglets-console { overflow-x: auto; scrollbar-width: none; }
+.onglets-console::-webkit-scrollbar { display: none; }
+.onglets-console button { flex: 0 0 auto; }
+
+.ligne-modele { display: flex; gap: 6px; align-items: center; margin-top: 8px; }
+.ligne-modele input { flex: 1; min-width: 0; min-height: 40px; padding: 0 10px; border: 1.5px solid var(--trait); border-radius: 10px; }
+.ligne-modele input:first-child { flex: 0 0 34%; }
+.modele-caisse { margin-top: 10px; display: flex; flex-direction: column; gap: 8px; }
+.modele-caisse > input { min-height: 40px; padding: 0 10px; border: 1.5px solid var(--trait); border-radius: 10px; }
+.modele-caisse .ligne-modele input:first-child { flex: 1; }
+.groupe-droits { margin-top: 12px; }

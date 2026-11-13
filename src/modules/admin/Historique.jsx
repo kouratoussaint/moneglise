@@ -26,20 +26,28 @@ export function Historique() {
   const [table, setTable] = useState('');
   const [periode, setPeriode] = useState('30');
   const [detail, setDetail] = useState(null);
+  const superAdmin = user.role === 'super_admin';
+  const [egl, setEgl] = useState(superAdmin ? '' : egliseId);
 
   const entrees = useMemo(() => {
     const depuis = periode === 'tout' ? '' : new Date(Date.now() - Number(periode) * 86400000).toISOString();
     return (db.historique || [])
-      .filter((h) => (user.role === 'super_admin' ? h.eglise_id === egliseId || !egliseId : h.eglise_id === egliseId) && (!qui || h.user_id === qui)
+      .filter((h) => (superAdmin ? !egl || h.eglise_id === egl : h.eglise_id === egliseId) && (!qui || h.user_id === qui)
         && (!action || h.action === action) && (!table || h.table === table) && (!depuis || h.le >= depuis))
       .sort((a, b) => b.le.localeCompare(a.le)).slice(0, 400);
-  }, [db.historique, egliseId, qui, action, table, periode, user.role]);
+  }, [db.historique, egliseId, qui, action, table, periode, superAdmin, egl]);
   const auteurs = [...new Set((db.historique || []).filter((h) => h.eglise_id === egliseId).map((h) => h.user_id))].map((id) => personne(db, id)).filter(Boolean);
   let jourPrec = '';
 
   return (
     <div>
       <EnTete titre="Historique" sousTitre="Toutes les actions, avec leur auteur, la date et l'heure" />
+      {superAdmin && (
+        <select className="select-simple marge" value={egl} onChange={(e) => setEgl(e.target.value)}>
+          <option value="">Toutes les églises</option>
+          {db.eglises.filter((e) => e.id !== '_global').map((e) => <option key={e.id} value={e.id}>{e.nom}</option>)}
+        </select>
+      )}
       <div className="filtres-historique">
         <select value={qui} onChange={(e) => setQui(e.target.value)}><option value="">Toutes les personnes</option>{auteurs.map((u) => <option key={u.id} value={u.id}>{u.prenom} {u.nom}</option>)}</select>
         <select value={action} onChange={(e) => setAction(e.target.value)}><option value="">Toutes les actions</option>{Object.entries(ACTIONS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>
@@ -56,7 +64,7 @@ export function Historique() {
                 {sep && <div className="fil-jour"><span>{jour}</span></div>}
                 <button className="entree-historique" onClick={() => setDetail(h)}>
                   <span className="pastille" style={{ background: `${COULEURS[h.action] || '#5B6B86'}16`, color: COULEURS[h.action] || '#5B6B86' }}><I size={18} /></span>
-                  <span className="eh-texte"><span><b>{nomCourt(auteur)}</b> {VERBES[h.action] || h.action} {h.table && h.action !== 'import' && h.action !== 'annulation_import' ? `${(TABLES_LIBELLES[h.table] || '').toLowerCase()} ` : ''}<b>« {h.libelle} »</b></span><small>{heure(h.le)}{h.detail ? ` · ${h.detail}` : ''}</small></span>
+                  <span className="eh-texte">{superAdmin && !egl && <small className="eh-eglise">{db.eglises.find((e) => e.id === h.eglise_id)?.nom || 'Application'}</small>}<span><b>{nomCourt(auteur)}</b> {VERBES[h.action] || h.action} {h.table && h.action !== 'import' && h.action !== 'annulation_import' ? `${(TABLES_LIBELLES[h.table] || '').toLowerCase()} ` : ''}<b>« {h.libelle} »</b></span><small>{heure(h.le)}{h.detail ? ` · ${h.detail}` : ''}</small></span>
                 </button>
               </div>
             );
@@ -95,6 +103,7 @@ function affiche(db, k, v) {
 
 export function Corbeille() {
   const { db, egliseId, user, can, actions, notifier } = useApp();
+  // L'administrateur de l'application voit la corbeille de toutes les églises
   const entrees = (db.corbeille || []).filter((c) => (c.eglise_id === egliseId || user.role === 'super_admin') && (can('admin.eglise') || c.supprime_par === user.id))
     .sort((a, b) => b.le.localeCompare(a.le));
   return (
@@ -105,7 +114,7 @@ export function Corbeille() {
           {entrees.map((c) => (
             <div key={c.id} className="ligne-user">
               <span className="pastille" style={{ background: '#D9475A14', color: '#D9475A' }}><Trash2 size={18} /></span>
-              <span className="ligne-user-texte"><strong>{c.libelle}</strong><small>{TABLES_LIBELLES[c.table]} · supprimé par {nomCourt(personne(db, c.supprime_par))} le {dateFr(c.le.slice(0, 10))} à {heure(c.le)}</small></span>
+              <span className="ligne-user-texte"><strong>{c.libelle}</strong><small>{user.role === 'super_admin' ? `${db.eglises.find((e) => e.id === c.eglise_id)?.nom || 'Application'} · ` : ''}{TABLES_LIBELLES[c.table]} · supprimé par {nomCourt(personne(db, c.supprime_par))} le {dateFr(c.le.slice(0, 10))} à {heure(c.le)}</small></span>
               <button className="btn btn-doux petit" onClick={() => { actions.restaurer([c.id]); notifier('Élément restauré'); }}><RotateCcw size={16} /> Restaurer</button>
             </div>
           ))}

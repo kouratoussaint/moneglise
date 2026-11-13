@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Phone, MessageCircle, Bell, ArrowDownLeft, ArrowUpRight, LockKeyhole, Layers, CheckCheck, Trash2, Search, ChevronDown, Cloud, ShieldCheck, Smartphone, Users, HeartHandshake } from 'lucide-react';
 import { useApp } from '../../state/AppContext';
+import { useApplication, telLien, waLien } from '../../lib/application';
 import { EnTete, IMAGES, SYMBOLE, Vide, useSelection, gestesSelection, BarreSelection } from '../../components/ui';
 import { MODULES } from '../registre';
 import { Icone } from '../../components/ui';
@@ -126,14 +127,17 @@ const FONCTIONS = [
 ];
 
 export function APropos() {
+  const app = useApplication();
+  const dev = app.developpeur;
+  const initiales = dev.nom.split(/\s+/).map((m) => m[0]).join('').slice(0, 2).toUpperCase();
   return (
     <div>
       <EnTete titre="À propos" />
       <div className="apropos-tete">
         <svg className="apropos-arc" viewBox="0 0 360 200" preserveAspectRatio="none" aria-hidden="true"><path d="M-20 180 C 100 150, 260 90, 380 20" /></svg>
         <img src={SYMBOLE} alt="" width="84" height="84" />
-        <h2>Mon Église</h2>
-        <p>Toute votre église à portée de main</p>
+        <h2>{app.nom}</h2>
+        <p>{app.slogan}</p>
         <span className="badge-version">Version 1.0</span>
       </div>
       <section className="bloc">
@@ -154,20 +158,20 @@ export function APropos() {
       <h3 className="menu-titre">Développeur</h3>
       <section className="bloc developpeur">
         <div className="dev-tete">
-          <span className="dev-avatar">TK</span>
-          <span><strong>KOURA Toussaint</strong><small>Développeur</small></span>
+          <span className="dev-avatar">{initiales}</span>
+          <span><strong>{dev.nom}</strong><small>{dev.role}</small></span>
         </div>
         <div className="dev-contacts">
-          <a className="btn btn-doux" href="tel:+22675493518"><Phone size={17} /> +226 75 49 35 18</a>
-          <a className="btn btn-doux" href="tel:+22671222228"><Phone size={17} /> +226 71 22 22 28</a>
-          <a className="btn btn-whatsapp" href="https://wa.me/22675493518" target="_blank" rel="noreferrer"><MessageCircle size={17} /> Écrire sur WhatsApp</a>
+          {dev.telephones.filter(Boolean).map((t) => <a key={t} className="btn btn-doux" href={telLien(t)}><Phone size={17} /> {t}</a>)}
+          {dev.email && <a className="btn btn-doux" href={`mailto:${dev.email}`}>{dev.email}</a>}
+          {dev.whatsapp && <a className="btn btn-whatsapp" href={waLien(dev.whatsapp)} target="_blank" rel="noreferrer"><MessageCircle size={17} /> Écrire sur WhatsApp</a>}
         </div>
       </section>
       <h3 className="menu-titre">Crédits</h3>
       <section className="bloc credits">
         <p>Photographies : Unsplash (licence Unsplash). Police : Outfit (SIL Open Font License). Pictogrammes : Lucide (licence ISC). Serveur : Supabase. Notifications : Firebase. Application : React et Capacitor.</p>
       </section>
-      <p className="tiroir-pied">© {new Date().getFullYear()} Mon Église · KOURA Toussaint</p>
+      <p className="tiroir-pied">© {new Date().getFullYear()} {app.nom} · {dev.nom}</p>
     </div>
   );
 }

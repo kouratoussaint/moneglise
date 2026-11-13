@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { repository } from '../data/repository';
-import { cloturer, modeleEglise, nouvelleEglise } from '../data/seed';
+import { cloturer, modeleEglise, droitsModele, nouvelleEglise } from '../data/seed';
 import { TABLES, supabase, differences, ajouterAFile, pousser, tirer, fusionner, relire, resumesFideles, enLigneReseau, messageAuth, dbVide, annuaire, ecouterServeur, rattacher, rejoindreServeur, creerEgliseServeur } from '../data/sync';
 import { structuresModele } from '../data/seed';
 import { CATEGORIES_STRUCTURE } from '../lib/structures';
@@ -50,11 +50,14 @@ const piecesAttente = {
 };
 export const useApp = () => useContext(Ctx);
 const CLE_MODELE = 'eglise360:modele_en_attente';
+// Paramètres de l'application (Console) : lus dans la copie locale
+const parametreDe = (db, id) => (db?.parametres || []).find((p) => p.id === id)?.valeur || null;
 
 export function AppProvider({ children }) {
   const online = enLigne();
   const [db, setDbState] = useState(null);
   const dbRef = useRef(null);
+  const modelesApp = () => parametreDe(dbRef.current, 'modeles');
   const metaRef = useRef(repository.meta.lire());
   const [session, setSession] = useState(() => repository.session.lire());
   const [sync, setSync] = useState({ statut: 'ok', derniere: metaRef.current.derniere, attente: Object.keys(metaRef.current.file || {}).length });
@@ -379,9 +382,19 @@ export function AppProvider({ children }) {
     if (u.actif === false) { await supabase().auth.signOut(); return 'Ce compte est désactivé. Contactez l\'administrateur de votre église.'; }
     // Église créée à l'inscription : on installe les caisses et catégories de départ
     try {
-      const modele = JSON.parse(localStorage.getItem(CLE_MODELE));
-      if (modele && u.role === 'admin' && modele.caisses[0]?.eglise_id === u.eglise_id && !dbRef.current.caisses.some((c) => c.eglise_id === u.eglise_id)) {
-        maj((d) => { d.caisses.push(...modele.caisses); d.categories.push(...modele.categories); d.conversations.push(...(modele.conversations || [])); d.structures = [...(d.structures || []), ...structuresModele(u.eglise_id)]; return d; });
+      const attente = JSON.parse(localStorage.getItem(CLE_MODELE));
+      const eidModele = attente?.eglise_id || attente?.caisses?.[0]?.eglise_id;
+      if (attente && u.role === 'admin' && eidModele === u.eglise_id && !dbRef.current.caisses.some((c) => c.eglise_id === u.eglise_id)) {
+        // Modèles de la console de l'application (lus après la synchronisation), sinon ceux par défaut
+        const modeles = modelesApp();
+        const modele = attente.caisses ? attente : modeleEglise(u.eglise_id, modeles);
+        maj((d) => {
+          d.caisses.push(...modele.caisses); d.categories.push(...modele.categories); d.conversations.push(...(modele.conversations || []));
+          d.structures = [...(d.structures || []), ...structuresModele(u.eglise_id, modeles)];
+          const e = d.eglises.find((x) => x.id === u.eglise_id);
+          if (e && modeles?.droits) e.droits = droitsModele(modeles);
+          return d;
+        });
       }
       localStorage.removeItem(CLE_MODELE);
     } catch { /* */ }
@@ -409,7 +422,7 @@ export function AppProvider({ children }) {
         if (nouvelleEgliseNom) {
           const eid = uid('egl');
           meta.eglise = nouvelleEglise(eid, nouvelleEgliseNom.trim(), ville?.trim() || '');
-          localStorage.setItem(CLE_MODELE, JSON.stringify(modeleEglise(eid)));
+          localStorage.setItem(CLE_MODELE, JSON.stringify({ eglise_id: eid }));
         } else meta.eglise_id = egliseIdChoisie;
         const { data, error } = await supabase().auth.signUp({ email: email.trim(), password: mdp, options: { data: meta } });
         if (error) return messageAuth(error);
@@ -422,10 +435,10 @@ export function AppProvider({ children }) {
         let eid = egliseIdChoisie, role = 'fidele', statut = 'en_attente';
         if (nouvelleEgliseNom) {
           eid = uid('egl');
-          d.eglises.push(nouvelleEglise(eid, nouvelleEgliseNom.trim(), ville?.trim() || '', 'en_attente'));
-          const m = modeleEglise(eid);
+          d.eglises.push(nouvelleEglise(eid, nouvelleEgliseNom.trim(), ville?.trim() || '', 'en_attente', modelesApp()));
+          const m = modeleEglise(eid, modelesApp());
           d.caisses.push(...m.caisses); d.categories.push(...m.categories); d.conversations.push(...m.conversations);
-          d.structures = [...(d.structures || []), ...structuresModele(eid)];
+          d.structures = [...(d.structures || []), ...structuresModele(eid, modelesApp())];
           role = 'admin'; statut = 'actif';
         }
         d.users.push({ id, eglise_id: eid, prenom: prenom.trim(), nom: nom.trim(), email: email.trim(), mdp, role, caisses: [], actif: true, statut, le: today() });
@@ -455,7 +468,7 @@ export function AppProvider({ children }) {
     ouvrirConversation(id) { convOuverte.current = id; if (id) majRef.current?.([id], 'lu'); },
     marquerLu(id) { majRef.current?.([id], 'lu'); },
     envoyerMessage(convId, texte) {
-      const conv = db.conversations.find((c) => c.id === convId);
+      const conv = dbRef.current.conversations.find((c) => c.id === convId); // données à jour (fil créé juste avant)
       if (!conv || !texte.trim()) return;
       maj((d) => { d.messages.push({ id: uid('msg'), eglise_id: conv.eglise_id, conversation_id: convId, auteur_id: user.id, texte: texte.trim(), le: new Date().toISOString() }); return d; }, { vite: true });
       jouer('tic');
@@ -759,6 +772,20 @@ export function AppProvider({ children }) {
       maj((d) => { const e = d.eglises.find((x) => x.id === id); e.statut = accepter ? 'actif' : 'refuse'; e.valide_le = new Date().toISOString(); e.valide_par = user.id; return d; }, { vite: true });
     },
     // ---------- Console de l'administrateur de l'application ----------
+    convAnnonces(eid) {
+      const id = `${eid}_conv_annonces`;
+      if (!dbRef.current.conversations.some((c) => c.id === id)) maj((d) => { d.conversations.push(...conversationsEglise(eid, user.id).filter((c) => c.type === 'annonces')); return d; });
+      return id;
+    },
+    enregistrerParametreApp(id, valeur) {
+      maj((d) => {
+        d.parametres = d.parametres || [];
+        const ex = d.parametres.find((p) => p.id === id);
+        if (ex) Object.assign(ex, { valeur, maj_par: user.id, maj_le: new Date().toISOString() });
+        else d.parametres.push({ id, eglise_id: '_global', valeur, maj_par: user.id, maj_le: new Date().toISOString() });
+        return d;
+      }, { trace: { action: 'modification', table: 'parametres', objet_id: id, libelle: id === 'modeles' ? 'Modèles des nouvelles églises' : 'Paramètres de l\'application' } });
+    },
     statutEglise(id, statut) { maj((d) => { const e = d.eglises.find((x) => x.id === id); e.statut = statut; e.statut_le = new Date().toISOString(); e.statut_par = user.id; return d; }, { vite: true }); },
     modifierEgliseApp(id, patch) { maj((d) => { Object.assign(d.eglises.find((x) => x.id === id), patch); return d; }); },
     supprimerEglise(id) { maj((d) => { d.eglises = d.eglises.filter((x) => x.id !== id); return d; }); return { corbeille: derniereCorbeille.current }; },
@@ -773,16 +800,16 @@ export function AppProvider({ children }) {
     },
     async creerAutreEglise({ nom, ville }) {
       const eid = uid('egl');
-      const eg = nouvelleEglise(eid, nom.trim(), ville?.trim() || '', 'en_attente');
-      const m = modeleEglise(eid);
+      const eg = nouvelleEglise(eid, nom.trim(), ville?.trim() || '', 'en_attente', modelesApp());
+      const m = modeleEglise(eid, modelesApp());
       if (online) {
         try { await creerEgliseServeur(eg); } catch (e) { return messageAuth(e); }
         await synchroniser({ complet: true });
-        maj((d) => { d.caisses.push(...m.caisses); d.categories.push(...m.categories); d.conversations.push(...m.conversations); d.structures = [...(d.structures || []), ...structuresModele(eid)]; return d; });
+        maj((d) => { d.caisses.push(...m.caisses); d.categories.push(...m.categories); d.conversations.push(...m.conversations); d.structures = [...(d.structures || []), ...structuresModele(eid, modelesApp())]; return d; });
       } else {
         maj((d) => {
           d.eglises.push(eg); d.caisses.push(...m.caisses); d.categories.push(...m.categories); d.conversations.push(...m.conversations);
-          d.structures = [...(d.structures || []), ...structuresModele(eid)];
+          d.structures = [...(d.structures || []), ...structuresModele(eid, modelesApp())];
           d.users.push({ ...user, id: uid('u'), eglise_id: eid, role: 'admin', caisses: [], statut: 'actif' });
           return d;
         });
@@ -997,9 +1024,9 @@ export function AppProvider({ children }) {
       if (db.users.some((x) => x.email.toLowerCase() === adminEmail.toLowerCase())) return 'Cette adresse e-mail est déjà utilisée.';
       maj((d) => {
         const eid = uid('egl');
-        d.eglises.push(nouvelleEglise(eid, nom, ville, 'actif'));
-        d.structures = [...(d.structures || []), ...structuresModele(eid)];
-        const m = modeleEglise(eid);
+        d.eglises.push(nouvelleEglise(eid, nom, ville, 'actif', modelesApp()));
+        d.structures = [...(d.structures || []), ...structuresModele(eid, modelesApp())];
+        const m = modeleEglise(eid, modelesApp());
         d.caisses.push(...m.caisses); d.categories.push(...m.categories); d.conversations.push(...m.conversations);
         d.users.push({ id: uid('u'), eglise_id: eid, prenom: adminPrenom, nom: adminNom, email: adminEmail.trim().toLowerCase(), ...(online ? {} : { mdp: 'eglise360' }), role: 'admin', caisses: [], actif: true });
         return d;

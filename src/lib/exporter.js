@@ -157,3 +157,6 @@ export async function exporterModeleImport(caisse, categories = []) {
   const out = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
   await livrer(new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `modele_import_${(caisse?.nom || 'caisse').replace(/[^\w-]+/g, '_')}.xlsx`, { partager: true });
 }
+
+// Livraison d'un fichier quelconque (partage sur téléphone, téléchargement sur ordinateur)
+export const livrerFichier = (blob, nom) => livrer(blob, nom, { partager: true });

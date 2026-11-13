@@ -82,7 +82,8 @@ def donnees():
         sql("insert into enregistrements (table_nom, id, eglise_id, data) values ('eglises', %s, %s, %s)", eg, eg, json.dumps({'nom': eg.upper(), 'droits': json.loads(m)}))
     sql(open(os.path.join(RACINE, 'supabase', 'schema.sql')).read())  # applique les migrations aux églises
     comptes = {'admin': ('e1', 'admin', []), 'pasteur': ('e1', 'pasteur', []), 'gest': ('e1', 'gestionnaire', ['c_eg']),
-               'tres': ('e1', 'fidele', []), 'pres': ('e1', 'fidele', []), 'membre': ('e1', 'fidele', []), 'externe': ('e2', 'fidele', [])}
+               'tres': ('e1', 'fidele', []), 'pres': ('e1', 'fidele', []), 'membre': ('e1', 'fidele', []), 'externe': ('e2', 'fidele', []),
+               'appli': ('_global', 'super_admin', [])}
     for nom, (eg, role, caisses) in comptes.items():
         sql("insert into auth.users (id, email) values (%s, %s)", compte(nom), f'{nom}@test.bf')
         ins('users', f'u_{nom}', eg, {'prenom': nom, 'role': role, 'caisses': caisses, 'auth_id': compte(nom)})
@@ -135,6 +136,10 @@ def tests():
     d = json.loads(json.dumps(e)); d['nom'] = 'E1 renommée'; d['droits']['fidele']['fin.voir_details'] = True
     verifier("#10 Pasteur : ne modifie pas les droits d'accès", ecrire('pasteur', 'eglises', 'e1', 'e1', d), False)
     verifier("#10 Administrateur : modifie les droits d'accès", ecrire('admin', 'eglises', 'e1', 'e1', {**d, 'droits': {**d['droits'], 'fidele': {**d['droits']['fidele'], 'fin.voir_details': False}}}), True)
+    # Paramètres de l'application
+    verifier("Paramètres : l'administrateur de l'application les modifie", ecrire('appli', 'parametres', 'application', '_global', {'valeur': {'maintenance': {'actif': False}}}), True)
+    verifier("Paramètres : lisibles par tout compte", ids('membre', 'parametres'), ['application'])
+    verifier("Paramètres : un administrateur d'église ne les modifie pas", ecrire('admin', 'parametres', 'application', '_global', {'valeur': {'maintenance': {'actif': True}}}), False)
     # Console : église suspendue par l'administrateur de l'application
     sql("update enregistrements set data = data || '{\"statut\": \"suspendue\"}' where table_nom = 'eglises' and id = 'e2'")
     verifier("Église suspendue : ses membres ne lisent plus rien", ids('externe', 'fideles'), [])

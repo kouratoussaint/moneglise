@@ -305,6 +305,8 @@ begin
     return d->>'user_id' = any(mes) and exists (select 1 from enregistrements where table_nom = 'notifications' and id = rid);
   end if;
   if t = 'corbeille' then return sup or (m is not null and (d->>'supprime_par' = any(mes) or e360_config(eg))); end if;
+  -- Paramètres de l'application (modèles des nouvelles églises, maintenance…) : l'administrateur de l'application seul
+  if t = 'parametres' then return sup; end if;
   if t = 'demandes' then
     return sup or (m is not null and (d->>'demandeur' = any(mes) or e360_droit('fin.rouvrir', eg)));
   end if;
@@ -376,6 +378,7 @@ grant select, insert, update on public.enregistrements to authenticated;
 drop policy if exists e360_lecture on public.enregistrements;
 create policy e360_lecture on public.enregistrements for select to authenticated using (
   case
+    when table_nom = 'parametres' then true
     when table_nom = 'conversations' then e360_conv_visible(eglise_id, data)
     when table_nom in ('messages', 'lectures') then e360_conv_acces(data->>'conversation_id')
     when table_nom = 'appareils' then data->>'user_id' = any(e360_mes_ids())

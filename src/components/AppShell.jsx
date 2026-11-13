@@ -8,6 +8,8 @@ import {
 import { useApp } from '../state/AppContext';
 import { useVue } from '../state/useVue';
 import { MenuTiroir } from './Menu';
+import { lireApplication } from '../lib/application';
+import { Wrench } from 'lucide-react';
 import { caissesEglise } from '../lib/finance';
 import { ROLES } from '../lib/permissions';
 import { MODULES } from '../modules/registre';
@@ -171,6 +173,7 @@ function useTirerPourActualiser(actualiser) {
 }
 
 export default function AppShell() {
+  const maintenance = lireApplication(useApp().db).maintenance;
   const vue = useVue(); // avant tout retour anticipé (règle des hooks)
   const voitDetail = vue.caisses.some(vue.detail);
   const { user, pret, can, online, actions, notifier, db, eglise } = useApp();
@@ -224,7 +227,9 @@ export default function AppShell() {
           <RefreshCw size={20} style={{ transform: tirer.charge ? undefined : `rotate(${tirer.dist * 3}deg)` }} className={tirer.charge ? 'tourne' : ''} />
         </div>
         <main className="page" key={loc.pathname} style={tirer.dist && !tirer.charge ? { transform: `translateY(${tirer.dist * 0.4}px)` } : undefined}>
-          {user.doit_changer_mdp ? <ChangerMotDePasse /> : bloque && !autorise ? <EnAttente /> : <Outlet />}
+          {maintenance.actif && user.role !== 'super_admin' ? (
+            <div className="attente"><div className="attente-carte"><span className="attente-icone"><Wrench size={26} /></span><h1>Maintenance en cours</h1><p>{maintenance.message}</p></div></div>
+          ) : user.doit_changer_mdp ? <ChangerMotDePasse /> : bloque && !autorise ? <EnAttente /> : <Outlet />}
         </main>
         <nav className={`nav-bas ${bloque ? 'masquee' : ''} ${enConversation ? 'masquee' : ''} ${tabs.length >= 6 ? 'serre' : ''}`} aria-label="Navigation principale">
           {tabs.map((t) => t.fab ? (
