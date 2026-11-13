@@ -40,4 +40,20 @@ export async function gererClavier() {
   };
   Keyboard.addListener('keyboardWillHide', fermer);
   Keyboard.addListener('keyboardDidHide', fermer);
+
+  // Filet de sécurité : sous Android 15, le signal « clavier fermé » n'arrive pas toujours.
+  // Dès qu'aucun champ de saisie n'est actif, le clavier est forcément fermé : on rétablit l'écran
+  // (sinon la barre du bas restait masquée jusqu'au redémarrage de l'application).
+  const saisieActive = () => {
+    const el = document.activeElement;
+    if (!el) return false;
+    if (el.isContentEditable) return true;
+    if (el.tagName === 'TEXTAREA' || el.tagName === 'SELECT') return true;
+    return el.tagName === 'INPUT' && !['button', 'checkbox', 'radio', 'range', 'file', 'submit', 'color'].includes(el.type);
+  };
+  const verifier = () => { if (racine.classList.contains('clavier-ouvert') && !saisieActive()) fermer(); };
+  document.addEventListener('focusout', () => setTimeout(verifier, 350));
+  document.addEventListener('visibilitychange', () => setTimeout(verifier, 200));
+  window.addEventListener('resize', () => setTimeout(verifier, 250));
+  setInterval(verifier, 1500);
 }

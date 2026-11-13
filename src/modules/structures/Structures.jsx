@@ -98,6 +98,12 @@ export function DetailStructure() {
   const membres = useMemo(() => (s ? appartenancesStructure(db, s.id).map((a) => ({ a, f: (db.fideles || []).find((x) => x.id === a.fidele_id) })).filter((x) => x.f) : []), [db, s]);
   if (!s) return <><EnTete titre="Structure" /><Vide icone="Network" titre="Structure introuvable" /></>;
   const peut = (cle) => droitStructure(db, user, can, s.id, cle);
+  // Un fidèle qui n'est pas membre ne voit que l'aperçu (membres, bureau, caisse et activités réservés
+  // aux membres, au bureau et aux responsables de l'église — règle aussi appliquée par le serveur)
+  const ficheMoi = ficheDuCompte(db, user.id);
+  const accesComplet = user.role === 'super_admin' || can('admin.eglise') || can('acc.toutes_structures') || can('fin.voir_details')
+    || estMembreDe(db, user, s.id) || (db.postes || []).some((p) => p.structure_id === s.id && p.fidele_id && p.fidele_id === ficheMoi?.id);
+  const demandeEnCours = (db.appartenances || []).some((a) => a.structure_id === s.id && a.fidele_id === ficheMoi?.id && a.statut === 'en_attente');
   const postes = postesStructure(db, s.id);
   const anciens = appartenancesStructure(db, s.id, true).filter((a) => a.jusqu_au);
   const fiche = ficheDuCompte(db, user.id);
@@ -109,19 +115,27 @@ export function DetailStructure() {
     <div>
       <EnTete titre={s.nom} sousTitre={s.actif === false ? 'Structure désactivée' : s.description}
         actions={peut('membres') && <button className="btn-icone" aria-label="Modifier" onClick={() => setEdition(s)}><Pencil size={20} /></button>} />
-      <div className="structure-tete">
-        <div><b>{membres.length}{peut('membres') && demandesStructure(db, s.id).length ? <em className="pastille-nonlu petit">{demandesStructure(db, s.id).length}</em> : null}</b><small>membres</small></div>
-        <div><b>{postes.filter((p) => p.fidele_id).length}/{postes.length}</b><small>postes pourvus</small></div>
-        <div><b>{mesPostes.length ? mesPostes.map((p) => p.intitule).join(', ') : estMembreDe(db, user, s.id) ? 'Membre' : '—'}</b><small>votre place</small></div>
-      </div>
+      {accesComplet && (
+        <div className="structure-tete">
+          <div><b>{membres.length}{peut('membres') && demandesStructure(db, s.id).length ? <em className="pastille-nonlu petit">{demandesStructure(db, s.id).length}</em> : null}</b><small>membres</small></div>
+          <div><b>{postes.filter((p) => p.fidele_id).length}/{postes.length}</b><small>postes pourvus</small></div>
+          <div><b>{mesPostes.length ? mesPostes.map((p) => p.intitule).join(', ') : estMembreDe(db, user, s.id) ? 'Membre' : '—'}</b><small>votre place</small></div>
+        </div>
+      )}
       <div className="onglets-msg">
-        {[['apercu', 'Aperçu'], ['membres', 'Membres'], ['bureau', 'Bureau'], ['caisse', 'Caisse'], ['activites', 'Activités']].map(([v, l]) => (
+        {(accesComplet ? [['apercu', 'Aperçu'], ['membres', 'Membres'], ['bureau', 'Bureau'], ['caisse', 'Caisse'], ['activites', 'Activités']] : [['apercu', 'Aperçu']]).map(([v, l]) => (
           <button key={v} className={onglet === v ? 'actif' : ''} onClick={() => setOnglet(v)}><span>{l}</span></button>
         ))}
       </div>
 
       {onglet === 'apercu' && (
         <div className="pile">
+          {!accesComplet && (
+            <div className="note"><span>Vous n'êtes pas membre de {s.nom} : ses membres, son bureau, sa caisse et ses activités sont réservés à ses membres.</span></div>
+          )}
+          {!accesComplet && ficheMoi && s.actif !== false && (demandeEnCours
+            ? <p className="alerte">Votre demande d'adhésion est en attente de validation.</p>
+            : <button className="btn btn-primaire" onClick={() => { const r = actions.demanderStructure(s.id); if (typeof r === 'string') notifier(r, 'erreur'); else notifier(`Demande envoyée à ${s.nom}`, 'ok', 'succes', { annuler: () => actions.retirerAppartenances([r.id]) }); }}>Demander à rejoindre {s.nom}</button>)}
           <dl className="fiche">
             <div className="bloc-texte"><dt>Mission</dt><dd>{s.description || '—'}</dd></div>
             {s.date_creation && <div><dt>Créée le</dt><dd>{dateFr(s.date_creation)}</dd></div>}
@@ -134,7 +148,7 @@ export function DetailStructure() {
         </div>
       )}
 
-      {onglet === 'membres' && peut('membres') && demandesStructure(db, s.id).length > 0 && (
+      {accesComplet && onglet === 'membres' && peut('membres') && demandesStructure(db, s.id).length > 0 && (
         <section className="bloc bloc-liste bloc-attente">
           <div className="bloc-tete"><h2>Demandes d'adhésion</h2><span className="badge">{demandesStructure(db, s.id).length}</span></div>
           {demandesStructure(db, s.id).map((a) => {
@@ -151,7 +165,7 @@ export function DetailStructure() {
           })}
         </section>
       )}
-      {onglet === 'membres' && (
+      {accesComplet && onglet === 'membres' && (
         <section className="bloc bloc-liste">
           <div className="bloc-tete"><h2>{membres.length} membre{membres.length > 1 ? 's' : ''}</h2>{peut('membres') && <button className="lien" onClick={() => setAjout(true)}><Plus size={16} /> Ajouter</button>}</div>
           {membres.length === 0 && <p className="texte-doux petit">Aucun membre pour l'instant.</p>}
@@ -173,7 +187,7 @@ export function DetailStructure() {
         </section>
       )}
 
-      {onglet === 'bureau' && (
+      {accesComplet && onglet === 'bureau' && (
         <section className="bloc bloc-liste">
           <div className="bloc-tete"><h2>Bureau</h2>{peut('bureau') && <button className="lien" onClick={() => setPoste({ intitule: '', structure_id: s.id, droits: {} })}><Plus size={16} /> Poste</button>}</div>
           {postes.length === 0 && (
@@ -198,8 +212,8 @@ export function DetailStructure() {
         </section>
       )}
 
-      {onglet === 'caisse' && <OngletCaisse structure={s} />}
-      {onglet === 'activites' && <ListeActivites structureId={s.id} integre />}
+      {accesComplet && onglet === 'caisse' && <OngletCaisse structure={s} />}
+      {accesComplet && onglet === 'activites' && <ListeActivites structureId={s.id} integre />}
 
       {edition && <EditeurStructure structure={edition} onFermer={() => setEdition(null)} />}
       {ajout && <AjoutMembres structure={s} onFermer={() => setAjout(false)} />}
