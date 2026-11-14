@@ -646,6 +646,10 @@ export function AppProvider({ children }) {
     marquerActivite(id, statut) {
       maj((d) => { Object.assign(d.activites.find((x) => x.id === id), { statut, statut_par: user.id, statut_le: new Date().toISOString() }); return d; }, { vite: true });
     },
+    // Feuille de présence : fidèles présents (et nombre de visiteurs), base du suivi de l'assiduité
+    pointerPresences(id, presents, visiteurs = 0) {
+      maj((d) => { Object.assign(d.activites.find((x) => x.id === id), { presents, visiteurs: Number(visiteurs) || 0, pointe_par: user.id, pointe_le: new Date().toISOString() }); return d; });
+    },
     // ---------- Cotisations ----------
     enregistrerCotisation(c) {
       const id = c.id || uid('cot');

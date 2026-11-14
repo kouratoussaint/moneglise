@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Plus, MapPin, Clock, CalendarDays, Users, Pencil, Ban, CheckCircle2, XCircle, Bell, Info, Network, Trash2, ImagePlus, X } from 'lucide-react';
+import { Plus, MapPin, Clock, CalendarDays, Users, Pencil, Ban, CheckCircle2, XCircle, Bell, Info, Network, Trash2, ImagePlus, X, ClipboardCheck, Search, Check } from 'lucide-react';
 import { useApp } from '../../state/AppContext';
 import { statutActivite, LIBELLES_STATUT, activitesVisibles, formatDebut, TYPES_ACTIVITE, RAPPELS, finDe } from '../../lib/activites';
 import { droitStructure, nomFidele, membresStructure, fidelesEglise } from '../../lib/structures';
 import { dateFr } from '../../lib/format';
-import { Champ, EnTete, Feuille, Segmente, Vide, lireIllustration } from '../../components/ui';
+import { Avatar, Champ, EnTete, Feuille, Segmente, Vide, lireIllustration } from '../../components/ui';
+import { attendus, tauxPresence } from '../../lib/pilotage';
 
 const COULEUR = { a_venir: '#1F5FD6', en_cours: '#0E9F6E', realisee: '#5B6B86', annulee: '#D9475A', non_tenue: '#C98A06' };
 
@@ -141,6 +142,7 @@ export function FicheActivite() {
   const [edition, setEdition] = useState(null);
   const [annuler, setAnnuler] = useState(false);
   const [motif, setMotif] = useState('');
+  const [pointage, setPointage] = useState(false);
   const a = (db.activites || []).find((x) => x.id === id);
   if (!a) return <><EnTete titre="Activité" /><Vide icone="CalendarDays" titre="Activité introuvable" texte="Elle n'est peut-être pas encore synchronisée ou ne vous concerne pas." /></>;
   const st = statutActivite(a);
@@ -149,6 +151,9 @@ export function FicheActivite() {
   const resp = (a.responsables || []).map((fid) => (db.fideles || []).find((f) => f.id === fid)).filter(Boolean);
   const auteurAnnul = a.annulation?.par && db.users.find((u) => u.id === a.annulation.par);
   const fin = finDe(a);
+  // Feuille de présence : ceux qui gèrent l'activité, le pasteur, et pour les séances le responsable du planning
+  const pointe = gere || user.role === 'pasteur' || (a.programme_id && can('prog.gerer'));
+  const taux = tauxPresence(db, a);
 
   return (
     <div>
@@ -178,6 +183,15 @@ export function FicheActivite() {
         {a.infos && <div className="bloc-texte"><dt><Info size={16} /> Informations pratiques</dt><dd>{a.infos}</dd></div>}
         {st === 'annulee' && a.annulation && <div className="bloc-texte"><dt><Ban size={16} /> Annulation</dt><dd>{a.annulation.motif || 'Sans motif'}{auteurAnnul ? ` — par ${auteurAnnul.prenom} ${auteurAnnul.nom}` : ''}, le {dateFr(a.annulation.le.slice(0, 10))}</dd></div>}
       </dl>
+      {(st === 'realisee' || st === 'en_cours') && (Array.isArray(a.presents) || pointe) && (
+        <section className="bloc presence-bloc">
+          <div className="bloc-tete"><h2><ClipboardCheck size={16} /> Présences</h2>{taux !== null && <span className="jauge" style={{ '--p': `${taux}%` }}><b>{taux}%</b></span>}</div>
+          {Array.isArray(a.presents)
+            ? <p className="texte-doux">{a.presents.length} présent(s) sur {attendus(db, a).length} attendu(s){a.visiteurs ? ` · ${a.visiteurs} visiteur(s)` : ''}{a.pointe_le ? ` — pointé le ${dateFr(a.pointe_le.slice(0, 10))}` : ''}</p>
+            : <p className="texte-doux">La feuille de présence n'a pas encore été remplie : elle sert au suivi de l'assiduité.</p>}
+          {pointe && <button className="btn btn-doux btn-plein" onClick={() => setPointage(true)}><ClipboardCheck size={18} /> {Array.isArray(a.presents) ? 'Modifier les présences' : 'Pointer les présences'}</button>}
+        </section>
+      )}
       {gere && (
         <div className="pile marge-haut">
           {(st === 'a_venir' || st === 'en_cours') && <button className="btn btn-danger-doux" onClick={() => { setMotif(''); setAnnuler(true); }}><Ban size={18} /> Annuler l'activité</button>}
@@ -187,11 +201,47 @@ export function FicheActivite() {
         </div>
       )}
       {edition && <EditeurActivite activite={edition} onFermer={() => setEdition(null)} />}
+      {pointage && <FeuillePresences activite={a} onFermer={() => setPointage(false)} />}
       <Feuille ouverte={annuler} onFermer={() => setAnnuler(false)} titre="Annuler l'activité"
         pied={<><button className="btn btn-doux" onClick={() => setAnnuler(false)}>Retour</button><button className="btn btn-danger" onClick={() => { actions.annulerActivite(a.id, motif.trim()); notifier('Activité annulée : les personnes concernées sont prévenues'); setAnnuler(false); }}>Confirmer l'annulation</button></>}>
         <p className="texte-doux">L'activité restera dans l'historique comme « annulée » : elle ne sera jamais comptée comme réalisée.</p>
         <Champ label="Motif (facultatif)"><input value={motif} onChange={(e) => setMotif(e.target.value)} placeholder="Ex. Intempéries, indisponibilité de la salle" /></Champ>
       </Feuille>
     </div>
+  );
+}
+
+// Pointage des présents parmi les personnes attendues (membres de la structure, liste désignée ou fidèles de l'église)
+function FeuillePresences({ activite: a, onFermer }) {
+  const { db, actions, notifier } = useApp();
+  const [presents, setPresents] = useState(() => new Set(a.presents || []));
+  const [visiteurs, setVisiteurs] = useState(a.visiteurs || '');
+  const [q, setQ] = useState('');
+  const liste = useMemo(() => attendus(db, a).map((id) => (db.fideles || []).find((f) => f.id === id)).filter(Boolean)
+    .sort((x, y) => nomFidele(x).localeCompare(nomFidele(y), 'fr')), [db, a]);
+  const visibles = liste.filter((f) => !q || nomFidele(f).toLowerCase().includes(q.toLowerCase()));
+  const basculer = (id) => { const n = new Set(presents); if (n.has(id)) n.delete(id); else n.add(id); setPresents(n); };
+  const tous = liste.length > 0 && liste.every((f) => presents.has(f.id));
+  return (
+    <Feuille ouverte onFermer={onFermer} titre="Feuille de présence"
+      pied={<><button className="btn btn-doux" onClick={onFermer}>Annuler</button>
+        <button className="btn btn-primaire" onClick={() => { actions.pointerPresences(a.id, [...presents], visiteurs); notifier('Présences enregistrées'); onFermer(); }}>Enregistrer ({presents.size}/{liste.length})</button></>}>
+      <div className="pile">
+        <div className="recherche"><Search size={18} /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Rechercher un fidèle" /></div>
+        <button className="lien" onClick={() => setPresents(tous ? new Set() : new Set(liste.map((f) => f.id)))}>{tous ? 'Tout décocher' : 'Tout cocher'}</button>
+        <div className="liste-contacts">
+          {visibles.map((f) => (
+            <button key={f.id} className={`contact ${presents.has(f.id) ? 'choisi' : ''}`} onClick={() => basculer(f.id)}>
+              <Avatar user={{ prenom: f.prenom, nom: f.nom }} taille={36} /><span><strong>{nomFidele(f)}</strong></span>
+              <i className="case">{presents.has(f.id) && <Check size={14} />}</i>
+            </button>
+          ))}
+          {visibles.length === 0 && <p className="texte-doux petit centre">Aucune personne attendue trouvée.</p>}
+        </div>
+        <Champ label="Visiteurs et autres participants" aide="Personnes présentes qui ne figurent pas dans la liste (facultatif)">
+          <input type="number" inputMode="numeric" min="0" value={visiteurs} onChange={(e) => setVisiteurs(e.target.value)} placeholder="0" />
+        </Champ>
+      </div>
+    </Feuille>
   );
 }

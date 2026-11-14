@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Plus, Users, Crown, Pencil, Search, UserMinus, Check, History, Power, ChevronRight, X, Trash2 } from 'lucide-react';
+import { Plus, Users, Crown, Pencil, Search, UserMinus, Check, History, Power, ChevronRight, X, Trash2, Gauge } from 'lucide-react';
+import { perimetres } from '../../lib/pilotage';
 import { useApp } from '../../state/AppContext';
 import { dateFr } from '../../lib/format';
 import { membresStructure, appartenancesStructure, postesStructure, nomFidele, ficheDuCompte, droitStructure, estMembreDe, fidelesEglise, DROITS_POSTE, droitsParDefaut, POSTES_MODELE } from '../../lib/structures';
@@ -114,7 +115,10 @@ export function DetailStructure() {
   return (
     <div>
       <EnTete titre={s.nom} sousTitre={s.actif === false ? 'Structure désactivée' : s.description}
-        actions={peut('membres') && <button className="btn-icone" aria-label="Modifier" onClick={() => setEdition(s)}><Pencil size={20} /></button>} />
+        actions={<>
+          {perimetres(db, user, can, egliseId).some((p) => p.id === s.id) && <button className="btn-icone" aria-label="Tableau de bord et rapport" onClick={() => nav(`/pilotage?p=${s.id}`)}><Gauge size={20} /></button>}
+          {peut('membres') && <button className="btn-icone" aria-label="Modifier" onClick={() => setEdition(s)}><Pencil size={20} /></button>}
+        </>} />
       {accesComplet && (
         <div className="structure-tete">
           <div><b>{membres.length}{peut('membres') && demandesStructure(db, s.id).length ? <em className="pastille-nonlu petit">{demandesStructure(db, s.id).length}</em> : null}</b><small>membres</small></div>

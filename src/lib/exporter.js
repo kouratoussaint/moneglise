@@ -41,7 +41,7 @@ export const COLONNES = [
   { cle: 'observations', titre: 'Observations', val: (o) => o.observations || '' },
 ];
 
-const nomFichier = (base, ext) => `${base.replace(/[^\w-]+/g, '_')}_${today()}.${ext}`;
+const nomFichier = (base, ext) => `${base.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w-]+/g, '_')}_${today()}.${ext}`;
 
 export async function exporterCSV(lignes, base, opts) {
   const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
@@ -160,3 +160,88 @@ export async function exporterModeleImport(caisse, categories = []) {
 
 // Livraison d'un fichier quelconque (partage sur téléphone, téléchargement sur ordinateur)
 export const livrerFichier = (blob, nom) => livrer(blob, nom, { partager: true });
+
+// Rapport annuel (église ou structure) : page de garde, sections successives (texte, chiffres clés, tableaux),
+// puis les signatures. Prêt à être présenté en assemblée.
+export async function exporterRapportAnnuel({ titre, sousTitre, eglise, sections = [], signatures = ['Le secrétaire', 'Le trésorier', 'Le pasteur'], editePar = '', base, ...opts }) {
+  const { jsPDF } = await import('jspdf');
+  const { default: autoTable } = await import('jspdf-autotable');
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+  const W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight();
+  const NAVY = [11, 42, 102], TEXTE = [14, 26, 51], DOUX = [91, 107, 134];
+  const pied = () => { doc.setFontSize(8); doc.setTextColor(140); doc.setFont('helvetica', 'normal'); doc.text(`${eglise || 'Mon Église'} — ${titre} · page ${doc.getNumberOfPages()}`, 36, H - 20); };
+  // Page de garde
+  doc.setFillColor(...NAVY); doc.rect(0, 0, W, H * 0.46, 'F');
+  doc.setFillColor(244, 180, 42); doc.rect(0, H * 0.46, W, 5, 'F');
+  doc.setTextColor(255); doc.setFont('helvetica', 'normal'); doc.setFontSize(11); doc.text('Mon Église', 48, 70);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(26); doc.text(doc.splitTextToSize(titre, W - 96), 48, H * 0.25);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(13); doc.text(doc.splitTextToSize(sousTitre || '', W - 96), 48, H * 0.25 + 64);
+  doc.setTextColor(...TEXTE); doc.setFontSize(12); doc.setFont('helvetica', 'bold'); doc.text(eglise || '', 48, H * 0.46 + 50);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(...DOUX);
+  doc.text(`Édité le ${dateFr(today())}${editePar ? ` par ${editePar}` : ''}`, 48, H * 0.46 + 70);
+  let ys = H * 0.46 + 110;
+  doc.setFontSize(10.5); doc.setTextColor(...TEXTE); doc.setFont('helvetica', 'bold'); doc.text('Sommaire', 48, ys); ys += 18;
+  doc.setFont('helvetica', 'normal');
+  sections.forEach((s, i) => { doc.text(`${i + 1}. ${s.titre}`, 60, ys); ys += 16; });
+  pied();
+
+  let y = 0;
+  const place = (h) => { if (y + h > H - 50) { doc.addPage(); pied(); y = 50; } };
+  sections.forEach((s, i) => {
+    doc.addPage(); pied(); y = 54;
+    doc.setFillColor(...NAVY); doc.rect(36, y - 16, 4, 22, 'F');
+    doc.setTextColor(...TEXTE); doc.setFont('helvetica', 'bold'); doc.setFontSize(15); doc.text(`${i + 1}. ${s.titre}`, 48, y);
+    y += 22;
+    for (const p of s.texte ? [].concat(s.texte) : []) {
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(...TEXTE);
+      const l = doc.splitTextToSize(p, W - 72); place(l.length * 13 + 6); doc.text(l, 36, y); y += l.length * 13 + 6;
+    }
+    if (s.chiffres?.length) {
+      const n = Math.min(4, s.chiffres.length);
+      const bw = (W - 72 - (n - 1) * 10) / n;
+      for (let k = 0; k < s.chiffres.length; k += n) {
+        place(56); y += 4;
+        s.chiffres.slice(k, k + n).forEach((c, j) => {
+          const x = 36 + j * (bw + 10);
+          doc.setFillColor(238, 243, 250); doc.roundedRect(x, y, bw, 46, 6, 6, 'F');
+          doc.setFontSize(8); doc.setTextColor(...DOUX); doc.setFont('helvetica', 'normal'); doc.text(doc.splitTextToSize(c.label, bw - 16)[0], x + 8, y + 16);
+          doc.setFontSize(11.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(...(c.couleur || TEXTE)); doc.text(String(c.valeur), x + 8, y + 35);
+        });
+        y += 56;
+      }
+    }
+    for (const t of s.tableaux || []) {
+      if (!t.lignes?.length) continue;
+      place(60);
+      if (t.titre) { doc.setFont('helvetica', 'bold'); doc.setFontSize(10.5); doc.setTextColor(...NAVY); doc.text(t.titre, 36, y + 6); y += 14; }
+      autoTable(doc, {
+        startY: y, head: [t.colonnes.map((c) => c.titre)], body: t.lignes,
+        styles: { font: 'helvetica', fontSize: 8.5, cellPadding: 4.5, textColor: TEXTE },
+        headStyles: { fillColor: [31, 95, 214], textColor: 255, fontStyle: 'bold' },
+        alternateRowStyles: { fillColor: [246, 249, 253] },
+        columnStyles: Object.fromEntries(t.colonnes.map((c, k) => [k, c.align ? { halign: c.align } : {}])),
+        didParseCell: (d) => { if (d.section === 'head' && t.colonnes[d.column.index]?.align) d.cell.styles.halign = t.colonnes[d.column.index].align; if (d.section === 'body' && t.totalDerniere && d.row.index === t.lignes.length - 1) d.cell.styles.fontStyle = 'bold'; },
+        margin: { left: 36, right: 36, top: 50 },
+        didDrawPage: pied,
+      });
+      y = (doc.lastAutoTable?.finalY || y) + 18;
+    }
+  });
+  // Adoption et signatures
+  place(130); y += 10;
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(...TEXTE);
+  doc.text(`Fait à ......................................, le ${dateFr(today())}`, 36, y); y += 30;
+  const lw = (W - 72 - (signatures.length - 1) * 20) / signatures.length;
+  signatures.forEach((t, i) => {
+    const x = 36 + i * (lw + 20);
+    doc.setFontSize(9); doc.setTextColor(...DOUX); doc.text(t, x, y);
+    doc.setDrawColor(200, 210, 225); doc.line(x, y + 50, x + lw, y + 50);
+  });
+  const blob = doc.output('blob');
+  if (opts.imprimer && !natif()) {
+    const url = URL.createObjectURL(blob);
+    const w = window.open(url);
+    if (w) { w.addEventListener('load', () => w.print()); return; }
+  }
+  await livrer(blob, nomFichier(base || titre, 'pdf'), opts);
+}

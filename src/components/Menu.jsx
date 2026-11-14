@@ -2,12 +2,13 @@
 // chaque entrée une seule fois par menu
 import { ChevronRight, Home, MessageCircle, Bell, UserRound, Building, Users, Network, CalendarDays, ListOrdered, BarChart3,
   LockKeyhole, ArrowLeftRight, Upload, Settings, Settings2, UserCog, UserCheck, ShieldCheck, Wallet, Tags, History, Trash2,
-  LayoutDashboard, LifeBuoy, Info, Server, LogOut, CalendarClock } from 'lucide-react';
+  LayoutDashboard, LifeBuoy, Info, Server, LogOut, CalendarClock, Gauge } from 'lucide-react';
 import { useApp } from '../state/AppContext';
 import { useVue } from '../state/useVue';
 import { totalNonLus } from '../lib/messagerie';
 import { caissesEglise } from '../lib/finance';
 import { MODULES } from '../modules/registre';
+import { perimetres } from '../lib/pilotage';
 import { Icone } from './ui';
 
 export function useMenu({ ouvrirEglises, deconnexion }) {
@@ -35,6 +36,7 @@ export function useMenu({ ouvrirEglises, deconnexion }) {
       { to: '/structures', icone: Network, l: 'Structures', couleur: '#7A4FD6' },
       { to: '/activites', icone: CalendarDays, l: 'Activités', couleur: '#D9475A' },
       { to: '/programmes', icone: CalendarClock, l: 'Programmes et services', couleur: '#C98A06' },
+      perimetres(db, user, can, egliseId).length > 0 && { to: '/pilotage', icone: Gauge, l: 'Tableaux de bord et rapport annuel', couleur: '#0B2A66' },
     ] },
     { titre: 'Finances', entrees: [
       voitDetail && { to: '/operations', icone: ListOrdered, l: 'Opérations' },
