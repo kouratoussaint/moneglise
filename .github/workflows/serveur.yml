@@ -1,11 +1,13 @@
 # Déploiement du serveur Supabase de Mon Église
 # - à chaque étiquette v* (nouvelle version) : applique schema.sql, déploie les fonctions, vérifie
+# - à chaque envoi sur main dont le message contient [version] : même déploiement
 # - à la demande : onglet Actions › « Serveur Supabase » › Run workflow
 # Secrets du dépôt nécessaires : SUPABASE_DB_URL, SUPABASE_ACCESS_TOKEN, SUPABASE_PROJECT_REF
 name: Serveur Supabase
 
 on:
   push:
+    branches: [main]
     tags: ['v*']
   workflow_dispatch:
     inputs:
@@ -20,6 +22,7 @@ concurrency:
 
 jobs:
   deployer:
+    if: github.event_name != 'push' || startsWith(github.ref, 'refs/tags/v') || contains(github.event.head_commit.message, '[version]')
     runs-on: ubuntu-latest
     env:
       SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}

@@ -1,6 +1,7 @@
 # Compilation automatique de l'APK signé
 # - à chaque envoi sur main : APK disponible dans l'onglet Actions (artefact)
 # - à chaque étiquette v* (ex. v1.0-build21) : Release GitHub créée avec l'APK joint
+# - à chaque envoi sur main dont le message contient [version] : étiquette v1.0-buildN et Release créées ici
 name: APK Android
 
 on:
@@ -99,9 +100,10 @@ jobs:
       - name: Nom de l'APK
         id: nom
         run: |
-          if [[ "$GITHUB_REF" == refs/tags/* ]]; then N="MonEglise-${GITHUB_REF_NAME}.apk"; else N="MonEglise-build$((20 + ${{ github.run_number }})).apk"; fi
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then N="MonEglise-${GITHUB_REF_NAME}.apk"; else N="MonEglise-v1.0-build$((20 + ${{ github.run_number }})).apk"; fi
           cp android/app/build/outputs/apk/release/app-release.apk "$N"
           echo "fichier=$N" >> "$GITHUB_OUTPUT"
+          echo "etiquette=v1.0-build$((20 + ${{ github.run_number }}))" >> "$GITHUB_OUTPUT"
 
       - uses: actions/upload-artifact@v4
         with:
@@ -113,6 +115,16 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
+          files: ${{ steps.nom.outputs.fichier }}
+          generate_release_notes: true
+
+      - name: Release (message [version] sur main)
+        if: github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[version]')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.nom.outputs.etiquette }}
+          target_commitish: ${{ github.sha }}
+          name: ${{ steps.nom.outputs.etiquette }}
           files: ${{ steps.nom.outputs.fichier }}
           generate_release_notes: true
 
