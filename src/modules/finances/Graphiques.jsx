@@ -65,3 +65,19 @@ export function Anneau({ items, hauteur = 170 }) {
     </div>
   );
 }
+
+// Courbe d'un effectif (nombre de fidèles, de membres…) mois par mois
+export function CourbeEffectif({ donnees, label = 'Fidèles', hauteur = 170 }) {
+  return (
+    <div style={{ height: hauteur }}>
+      <Line
+        data={{
+          labels: donnees.map((d) => moisCourt(d.ym)),
+          datasets: [{ label, data: donnees.map((d) => d.n), borderColor: '#0E9F6E', backgroundColor: 'rgba(14,159,110,.10)', fill: true, tension: 0.3, pointRadius: 3, pointBackgroundColor: '#fff', pointBorderWidth: 2 }],
+        }}
+        options={{ maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { ...tooltip, callbacks: { label: (c) => ` ${c.parsed.y} ${label.toLowerCase()}` } } },
+          scales: { ...axes, y: { ...axes.y, beginAtZero: true, ticks: { precision: 0, maxTicksLimit: 5 } } } }}
+      />
+    </div>
+  );
+}

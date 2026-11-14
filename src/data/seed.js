@@ -283,6 +283,15 @@ export function seed() {
     { id: 'act_asc', eglise_id: e1.id, structure_id: st(2), titre: 'Visite aux malades', type: 'Activité sociale', debut: quand(-6, '15:00'), lieu: 'CHU Sourô Sanou', destinataires: 'structure', statut: 'realisee', rappels: [] },
     { id: 'act_evang', eglise_id: e1.id, structure_id: st(0), titre: 'Sortie d\'évangélisation', type: 'Évangélisation', debut: quand(-3, '16:00'), lieu: 'Secteur 25', destinataires: 'structure', statut: 'annulee', annulation: { motif: 'Forte pluie', par: 'u_admin', le: new Date().toISOString() }, rappels: [] },
   ];
+  // Feuilles de présence d'exemple (suivi de l'assiduité) : environ 3 membres sur 4 présents
+  const membresDe = (sid) => db.appartenances.filter((a) => a.structure_id === sid).map((a) => a.fidele_id);
+  const pointer = (a, ratio) => { const m = membresDe(a.structure_id); a.presents = m.filter((_, i) => (i * 7) % 10 < ratio * 10); return a; };
+  db.activites.push(
+    pointer({ id: 'act_jad_m1', eglise_id: e1.id, structure_id: st(0), titre: 'Réunion mensuelle JAD', type: 'Réunion de bureau', debut: quand(-30, '16:00'), fin: quand(-30, '18:00'), lieu: 'Salle 1', destinataires: 'structure', statut: 'programmee', rappels: [] }, 0.8),
+    pointer({ id: 'act_jad_m2', eglise_id: e1.id, structure_id: st(0), titre: 'Réunion mensuelle JAD', type: 'Réunion de bureau', debut: quand(-60, '16:00'), fin: quand(-60, '18:00'), lieu: 'Salle 1', destinataires: 'structure', statut: 'programmee', rappels: [] }, 0.6),
+    pointer({ id: 'act_rep_p', eglise_id: e1.id, structure_id: st(5), titre: 'Répétition de la chorale', type: 'Répétition', debut: quand(-7, '18:00'), fin: quand(-7, '20:00'), lieu: 'Salle 2', destinataires: 'structure', statut: 'programmee', rappels: [] }, 0.9),
+  );
+  pointer(db.activites.find((a) => a.id === 'act_asc'), 0.7);
 
   // Présences d'exemple (« en ligne », « vu il y a… »)
   db.presences = [['u_pasteur', 0.01], ['u_admin', 0.3], ['u_fidele', 2], ['u_vimab', 26]].map(([u, h]) => ({ id: `pr_${u}`, eglise_id: e1.id, user_id: u, vu_le: il(h) }));

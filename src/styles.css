@@ -1070,3 +1070,10 @@ button.carte-config { width: 100%; text-align: left; }
 .mes-services { border: 1.5px solid #F4D58A; background: #FFFBF0; }
 .ligne-service { width: 100%; display: flex; align-items: center; gap: 12px; padding: 8px 0; text-align: left; }
 .ligne-service + .ligne-service { border-top: 1px solid #F1E3BC; }
+
+/* Tableaux de bord */
+.tableau tr.sous-total td { font-weight: 600; color: var(--doux); background: #FAFBFE; }
+.tableau tr.total td { font-weight: 700; color: var(--navy); border-top: 2px solid var(--trait); background: #EEF3FA; }
+.stats-ligne { display: flex; flex-wrap: wrap; gap: 8px 18px; color: var(--doux); font-size: .88rem; }
+.stats-ligne b { color: var(--navy); font-size: 1.05rem; margin-right: 4px; }
+.presence-bloc .bloc-tete h2 { display: flex; align-items: center; gap: 6px; }
