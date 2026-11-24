@@ -18,6 +18,7 @@ import { Historique, Corbeille } from './modules/admin/Historique';
 import Console from './modules/console/Console';
 import Programmes from './modules/programmes/Programmes';
 import Pilotage from './modules/pilotage/Pilotage';
+import Institutions, { FicheCompte } from './modules/institutions/Institutions';
 import { ListeFideles, FicheFidele } from './modules/membres/Fideles';
 import { ListeStructures, DetailStructure } from './modules/structures/Structures';
 import { SuiviCotisation } from './modules/structures/CaisseStructure';
@@ -66,6 +67,8 @@ export default function App() {
             <Route path="activites" element={<ListeActivites />} />
             <Route path="programmes" element={<Programmes />} />
             <Route path="pilotage" element={<Pilotage />} />
+            <Route path="institutions" element={<Institutions />} />
+            <Route path="institutions/:id" element={<FicheCompte />} />
             <Route path="activites/:id" element={<FicheActivite />} />
             <Route path="messages" element={<ListeMessages />} />
             <Route path="messages/:id" element={<Conversation />} />

@@ -10,6 +10,7 @@ import { nomFidele, postesStructure } from '../../lib/structures';
 import { PERIODICITES } from '../../lib/cotisations';
 import { fcfa, num, moisLabel, dateFr } from '../../lib/format';
 import { exporterRapportAnnuel } from '../../lib/exporter';
+import { comptesVisibles, totauxCompte } from '../../lib/institutions';
 import { EnTete, PastilleCaisse, Segmente, Vide } from '../../components/ui';
 import { BarresMois, Anneau, CourbeEffectif } from '../finances/Graphiques';
 
@@ -44,6 +45,12 @@ export default function Pilotage() {
   const fid = useMemo(() => fideles(db, egliseId, sid, annee), [db, egliseId, sid, annee]);
   const cot = useMemo(() => cotisations(db, egliseId, sid, annee), [db, egliseId, sid, annee]);
   const act = useMemo(() => activites(db, egliseId, sid, annee), [db, egliseId, sid, annee]);
+  // Comptes en banque et microfinance du périmètre
+  const bq = useMemo(() => {
+    const l = comptesVisibles(db, user, can, egliseId).filter((c) => (sid ? c.structure_id === sid : true))
+      .map((c) => ({ c, ...totauxCompte(db, c, `${annee}-01-01`, arret(annee)) }));
+    return { l, ouverture: l.reduce((t, x) => t + x.ouverture, 0), entrees: l.reduce((t, x) => t + x.entrees, 0), sorties: l.reduce((t, x) => t + x.sorties, 0), cloture: l.reduce((t, x) => t + x.cloture, 0) };
+  }, [db, user, can, egliseId, sid, annee]);
 
   if (!per) return <><EnTete titre="Tableaux de bord" /><Vide icone="BarChart3" titre="Aucun tableau de bord disponible" texte="Les tableaux de bord sont réservés aux responsables de l'église et aux bureaux des structures." /></>;
 
@@ -63,7 +70,7 @@ export default function Pilotage() {
         titre: `Rapport annuel ${annee}`, sousTitre: sid ? `${per.nom}` : 'Église et structures',
         eglise: eglise.nom, editePar: `${user.prenom} ${user.nom}`, base: `rapport_annuel_${annee}_${nomPer}`,
         signatures: sid ? ['Le secrétaire', 'Le trésorier', 'Le président'] : ['Le secrétaire', 'Le trésorier', 'Le pasteur'],
-        sections: sectionsRapport({ db, annee, sid, per, fi, fid, cot, act, groupesCaisses, arreteAu }), ...opts,
+        sections: sectionsRapport({ db, annee, sid, per, fi, fid, cot, act, bq, groupesCaisses, arreteAu }), ...opts,
       });
     } finally { setEnvoi(false); }
   };
@@ -117,6 +124,21 @@ export default function Pilotage() {
               </table>
             </div>
           </section>
+          {bq.l.length > 0 && (
+            <section className="bloc">
+              <h2>Comptes en banque et microfinance</h2>
+              <div className="tableau-defile">
+                <table className="tableau compact">
+                  <thead><tr><th>Compte</th><th className="droite">Au 1er janv.</th><th className="droite">Entrées</th><th className="droite">Sorties</th><th className="droite">Solde</th></tr></thead>
+                  <tbody>
+                    {bq.l.map((x) => <tr key={x.c.id} onClick={() => nav(`/institutions/${x.c.id}`)}><td>{x.c.institution}{x.c.intitule ? ` · ${x.c.intitule}` : ''}</td><td className="droite">{num(x.ouverture)}</td><td className="droite recette">{num(x.entrees)}</td><td className="droite depense">{num(x.sorties)}</td><td className="droite"><b>{num(x.cloture)}</b></td></tr>)}
+                    <tr className="total"><td>Disponible total (caisses + comptes)</td><td className="droite">{num(fi.ouverture + bq.ouverture)}</td><td /><td /><td className="droite"><b>{num(fi.cloture + bq.cloture)}</b></td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <p className="texte-doux petit">Les versements et retraits déplacent l'argent entre caisses et comptes : ils ne changent pas le disponible total.</p>
+            </section>
+          )}
           {fi.rec.length > 0 && <section className="bloc"><h2>Recettes par catégorie</h2><Anneau items={fi.rec} /></section>}
           {fi.dep.length > 0 && <section className="bloc"><h2>Dépenses par catégorie</h2><Anneau items={fi.dep} /></section>}
         </div>
@@ -230,7 +252,7 @@ export default function Pilotage() {
 }
 
 // Contenu du rapport annuel : mêmes chiffres que les tableaux de bord, mis en forme pour l'assemblée
-function sectionsRapport({ db, annee, sid, per, fi, fid, cot, act, groupesCaisses, arreteAu }) {
+function sectionsRapport({ db, annee, sid, per, fi, fid, cot, act, bq, groupesCaisses, arreteAu }) {
   const qui = sid ? per.nom : "L'église";
   const sections = [];
   sections.push({
@@ -276,6 +298,16 @@ function sectionsRapport({ db, annee, sid, per, fi, fid, cot, act, groupesCaisse
         { titre: 'Recettes par catégorie', colonnes: [{ titre: 'Catégorie' }, { titre: 'Montant', align: 'right' }, { titre: 'Part', align: 'right' }], lignes: fi.rec.map((x) => [x.categorie?.nom || 'Autre / N.P.', num(x.total), `${fi.t.recettes ? Math.round((x.total / fi.t.recettes) * 100) : 0} %`]) },
         { titre: 'Dépenses par catégorie', colonnes: [{ titre: 'Catégorie' }, { titre: 'Montant', align: 'right' }, { titre: 'Part', align: 'right' }], lignes: fi.dep.map((x) => [x.categorie?.nom || 'Autre / N.P.', num(x.total), `${fi.t.depenses ? Math.round((x.total / fi.t.depenses) * 100) : 0} %`]) },
       ],
+    });
+  }
+  if (bq.l.length) {
+    sections.push({
+      titre: 'Les comptes en banque et en microfinance',
+      texte: `Au ${arreteAu}, les comptes détiennent ${fcfa(bq.cloture)}. Avec les caisses, le disponible total s'élève à ${fcfa(fi.cloture + bq.cloture)}.`,
+      chiffres: [{ label: 'Solde au 1er janvier', valeur: fcfa(bq.ouverture) }, { label: 'Entrées', valeur: fcfa(bq.entrees), couleur: VERT }, { label: 'Sorties', valeur: fcfa(bq.sorties), couleur: ROUGE }, { label: `Solde au ${arreteAu}`, valeur: fcfa(bq.cloture), couleur: NAVY }],
+      tableaux: [{ titre: 'Situation des comptes', totalDerniere: true, colonnes: [{ titre: 'Compte' }, { titre: 'Au 1er janvier', align: 'right' }, { titre: 'Versements', align: 'right' }, { titre: 'Retraits', align: 'right' }, { titre: 'Autres entrées', align: 'right' }, { titre: 'Autres sorties', align: 'right' }, { titre: 'Solde', align: 'right' }],
+        lignes: [...bq.l.map((x) => [`${x.c.institution}${x.c.intitule ? ` · ${x.c.intitule}` : ''}`, num(x.ouverture), num(x.parType.versement), num(x.parType.retrait), num(x.parType.virement_recu + x.parType.interets), num(x.parType.paiement + x.parType.frais), num(x.cloture)]),
+          ['Total', num(bq.ouverture), num(bq.l.reduce((t, x) => t + x.parType.versement, 0)), num(bq.l.reduce((t, x) => t + x.parType.retrait, 0)), num(bq.l.reduce((t, x) => t + x.parType.virement_recu + x.parType.interets, 0)), num(bq.l.reduce((t, x) => t + x.parType.paiement + x.parType.frais, 0)), num(bq.cloture)]] }],
     });
   }
   if (cot.lignes.length) {

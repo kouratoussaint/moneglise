@@ -2,13 +2,14 @@
 // chaque entrée une seule fois par menu
 import { ChevronRight, Home, MessageCircle, Bell, UserRound, Building, Users, Network, CalendarDays, ListOrdered, BarChart3,
   LockKeyhole, ArrowLeftRight, Upload, Settings, Settings2, UserCog, UserCheck, ShieldCheck, Wallet, Tags, History, Trash2,
-  LayoutDashboard, LifeBuoy, Info, Server, LogOut, CalendarClock, Gauge } from 'lucide-react';
+  LayoutDashboard, LifeBuoy, Info, Server, LogOut, CalendarClock, Gauge, Landmark } from 'lucide-react';
 import { useApp } from '../state/AppContext';
 import { useVue } from '../state/useVue';
 import { totalNonLus } from '../lib/messagerie';
 import { caissesEglise } from '../lib/finance';
 import { MODULES } from '../modules/registre';
 import { perimetres } from '../lib/pilotage';
+import { comptesVisibles, peutGererComptes } from '../lib/institutions';
 import { Icone } from './ui';
 
 export function useMenu({ ouvrirEglises, deconnexion }) {
@@ -44,6 +45,8 @@ export function useMenu({ ouvrirEglises, deconnexion }) {
       voitDetail && { to: '/clotures', icone: LockKeyhole, l: 'Clôtures mensuelles', couleur: '#7A4FD6' },
       can('fin.transferer') && { to: '/transfert', icone: ArrowLeftRight, l: 'Transferts', couleur: '#2D8CF0' },
       saisie && { to: '/import', icone: Upload, l: 'Import Excel', couleur: '#0E9F6E' },
+      (comptesVisibles(db, user, can, egliseId).length > 0 || peutGererComptes(db, user, can, null) || (db.structures || []).some((s) => s.eglise_id === egliseId && peutGererComptes(db, user, can, s.id)))
+        && { to: '/institutions', icone: Landmark, l: 'Institutions financières', texte: 'Comptes en banque et microfinance', couleur: '#0B2A66' },
     ] },
     adminEglise && { titre: "Administration de l'église", entrees: [
       can('admin.eglise') && (eglise?.configuree

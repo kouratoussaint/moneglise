@@ -1077,3 +1077,22 @@ button.carte-config { width: 100%; text-align: left; }
 .stats-ligne { display: flex; flex-wrap: wrap; gap: 8px 18px; color: var(--doux); font-size: .88rem; }
 .stats-ligne b { color: var(--navy); font-size: 1.05rem; margin-right: 4px; }
 .presence-bloc .bloc-tete h2 { display: flex; align-items: center; gap: 6px; }
+
+/* Institutions financières */
+.carte-solde { background: linear-gradient(135deg, var(--navy), #163F8C); color: #fff; border-radius: var(--r-l); padding: 18px 20px; margin-bottom: 14px; box-shadow: var(--ombre); display: flex; flex-direction: column; gap: 4px; }
+.carte-solde small { opacity: .8; font-size: .8rem; }
+.carte-solde strong { font-size: 1.7rem; letter-spacing: -.02em; }
+.carte-solde span { opacity: .75; font-size: .8rem; }
+.grille-actions { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-bottom: 14px; }
+.action-rapide { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px 4px; background: var(--surface); border-radius: var(--r-m); box-shadow: var(--ombre); color: var(--bleu); font-size: .74rem; font-weight: 600; text-align: center; }
+.action-rapide span { color: var(--encre); line-height: 1.15; }
+.pastille-inst { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: #E3EDFC; color: var(--navy); flex-shrink: 0; }
+.montant-ligne { margin-left: auto; font-size: .9rem; white-space: nowrap; color: var(--navy); }
+.montant-ligne.recette { color: var(--vert); }
+.montant-ligne.depense { color: var(--rouge); }
+.texte-or { color: var(--or-fonce) !important; }
+.champ-bouton { width: 100%; text-align: left; padding: 12px 14px; border: 1.5px solid var(--trait); border-radius: var(--r-s); background: var(--surface); color: var(--encre); font-size: .92rem; min-height: 46px; }
+.deux-colonnes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.note.ok { background: #E1F5EC; color: #0A6B4A; }
+.ligne-boutons { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.ligne-user.inactif { opacity: .6; }

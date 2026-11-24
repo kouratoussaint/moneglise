@@ -4,8 +4,8 @@
 // Les éléments supprimés partent dans la corbeille et peuvent être restaurés.
 import { uid, fcfa } from './format';
 
-const SUIVIES = ['conversations', 'operations', 'caisses', 'categories', 'structures', 'clotures', 'users', 'eglises', 'demandes', 'fideles', 'appartenances', 'postes', 'cotisations', 'paiements', 'activites', 'coordonnees', 'listes', 'programmes'];
-const EN_CORBEILLE = ['operations', 'caisses', 'categories', 'structures', 'fideles', 'activites', 'cotisations', 'appartenances', 'postes', 'users', 'conversations', 'demandes', 'eglises'];
+const SUIVIES = ['conversations', 'operations', 'caisses', 'categories', 'structures', 'clotures', 'users', 'eglises', 'demandes', 'fideles', 'appartenances', 'postes', 'cotisations', 'paiements', 'activites', 'coordonnees', 'listes', 'programmes', 'comptes', 'mouvements'];
+const EN_CORBEILLE = ['operations', 'caisses', 'categories', 'structures', 'fideles', 'activites', 'cotisations', 'appartenances', 'postes', 'users', 'conversations', 'demandes', 'eglises', 'comptes', 'mouvements'];
 const IGNORES = new Set(['modifie_le', 'modifie_par', 'cree_le', 'mdp', 'le', 'photo', 'vu_le']);
 
 export const ACTIONS = {
@@ -16,7 +16,7 @@ export const ACTIONS = {
 };
 export const TABLES_LIBELLES = {
   conversations: 'Discussion', operations: 'Opération', caisses: 'Caisse', categories: 'Catégorie', structures: 'Structure', clotures: 'Clôture',
-  users: 'Utilisateur', eglises: 'Église', demandes: 'Demande', fideles: 'Fidèle', appartenances: 'Appartenance', postes: 'Poste du bureau', cotisations: 'Cotisation', paiements: 'Paiement de cotisation', activites: 'Activité', coordonnees: 'Coordonnées', listes: 'Liste', programmes: 'Programme', parametres: 'Paramètres de l\'application',
+  users: 'Utilisateur', eglises: 'Église', demandes: 'Demande', fideles: 'Fidèle', appartenances: 'Appartenance', postes: 'Poste du bureau', cotisations: 'Cotisation', paiements: 'Paiement de cotisation', activites: 'Activité', coordonnees: 'Coordonnées', listes: 'Liste', programmes: 'Programme', comptes: 'Compte en banque ou microfinance', mouvements: 'Mouvement de compte', parametres: 'Paramètres de l\'application',
 };
 
 const court = (v) => {
@@ -35,6 +35,8 @@ export function libelleObjet(db, table, o) {
     case 'appartenances': { const f = (db.fideles || []).find((x) => x.id === o.fidele_id); const s = (db.structures || []).find((x) => x.id === o.structure_id); return `${f ? `${f.prenom} ${f.nom || ''}`.trim() : 'Fidèle'} · ${s?.nom || 'structure'}`; }
     case 'postes': { const f = (db.fideles || []).find((x) => x.id === o.fidele_id); const s = (db.structures || []).find((x) => x.id === o.structure_id); return `${o.intitule} ${s?.nom || ''}${f ? ` : ${f.prenom} ${f.nom || ''}` : ''}`.trim(); }
     case 'activites': return o.titre;
+    case 'comptes': return `${o.institution || 'Compte'}${o.intitule ? ` · ${o.intitule}` : ''}`;
+    case 'mouvements': { const c = (db.comptes || []).find((x) => x.id === o.compte_id); return `${o.libelle || o.type} · ${c?.institution || 'compte'} (${fcfa(o.montant)})`; }
     case 'coordonnees': { const f = (db.fideles || []).find((x) => x.id === o.fidele_id); return `${f ? `${f.prenom || ''} ${f.nom || ''}`.trim() : 'Fidèle'} (coordonnées)`; }
     default: return o.nom || o.titre || o.id;
   }
@@ -42,7 +44,7 @@ export function libelleObjet(db, table, o) {
 
 const lienObjet = (table, o) => ({
   operations: `/operations/${o.id}`, caisses: `/caisses/${o.id}`, users: '/admin/utilisateurs', clotures: `/clotures?caisse=${o.caisse_id}`,
-  eglises: '/admin/eglise', categories: '/admin/categories', structures: `/structures/${o.id}`, demandes: '/clotures', activites: `/activites/${o.id}`, coordonnees: `/fideles/${o.fidele_id}`, listes: '/programmes?onglet=listes', programmes: '/programmes?onglet=programmes', fideles: `/fideles/${o.id}`, appartenances: `/structures/${o.structure_id}`, postes: `/structures/${o.structure_id}`,
+  eglises: '/admin/eglise', categories: '/admin/categories', structures: `/structures/${o.id}`, demandes: '/clotures', activites: `/activites/${o.id}`, coordonnees: `/fideles/${o.fidele_id}`, listes: '/programmes?onglet=listes', programmes: '/programmes?onglet=programmes', fideles: `/fideles/${o.id}`, appartenances: `/structures/${o.structure_id}`, postes: `/structures/${o.structure_id}`, comptes: `/institutions/${o.id}`, mouvements: `/institutions/${o.compte_id}`,
 }[table] || '/historique');
 
 function actionModif(table, a, b) {

@@ -293,6 +293,22 @@ export function seed() {
   );
   pointer(db.activites.find((a) => a.id === 'act_asc'), 0.7);
 
+  // Institutions financières : compte de l'église à MICRO AID, alimenté par des versements depuis la caisse Construction
+  db.comptes = [{ id: 'cpt_microaid', eglise_id: e1.id, structure_id: null, type: 'microfinance', institution: 'MICRO AID', intitule: 'Épargne construction', numero: 'MA-0042-178563', agence: 'Ouagadougou centre', date_ouverture: `${mois[0]}-02`, solde_initial: 0, caisse_id: C('construction'), responsables: ['u_vimab'], signataires: [], actif: true, cree_par: 'u_admin', cree_le: `${mois[0]}-02` }];
+  db.mouvements = [];
+  const mvt = (k, type, montant, libelle, extra = {}) => {
+    const id = `mvt_demo_${db.mouvements.length + 1}`, date = `${mois[k]}-${type === 'frais' ? '28' : '12'}`;
+    const lien = { versement: 'depense', retrait: 'recette' }[type];
+    if (lien) db.operations.push({ id: `op_${id}`, eglise_id: e1.id, caisse_id: C('construction'), type: lien, date, montant, categorie_id: `${e1.id}_transfert_${lien}`, libelle: `${type === 'versement' ? 'Versement à' : 'Retrait de'} MICRO AID`, description: libelle, observations: '', transfert_id: `bq_${id}`, compte_id: 'cpt_microaid', mouvement_id: id, cree_par: 'u_vimab', cree_le: date });
+    db.mouvements.push({ id, eglise_id: e1.id, compte_id: 'cpt_microaid', type, date, montant, libelle, reference: extra.reference || '', caisse_id: lien ? C('construction') : null, operation_id: lien ? `op_${id}` : null, pieces: [], cree_par: 'u_vimab', cree_le: date });
+  };
+  mvt(0, 'versement', 100000, 'Premier dépôt', { reference: 'BV-1021' });
+  mvt(1, 'versement', 50000, 'Dépôt mensuel', { reference: 'BV-1102' });
+  mvt(1, 'frais', 1500, 'Frais de tenue de compte');
+  mvt(2, 'virement_recu', 75000, 'Don de la mission partenaire');
+  mvt(3, 'versement', 40000, 'Dépôt mensuel', { reference: 'BV-1260' });
+  mvt(3, 'releve', 263500, 'Relevé trimestriel', { reference: 'R-T3' });
+
   // Présences d'exemple (« en ligne », « vu il y a… »)
   db.presences = [['u_pasteur', 0.01], ['u_admin', 0.3], ['u_fidele', 2], ['u_vimab', 26]].map(([u, h]) => ({ id: `pr_${u}`, eglise_id: e1.id, user_id: u, vu_le: il(h) }));
 
