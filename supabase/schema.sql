@@ -91,9 +91,9 @@ language sql stable security definer set search_path = public as $$
       from enregistrements e where e.table_nom = 'eglises' and e.id = eg
     ), (
       -- Valeurs par défaut des droits ajoutés après la création de l'église
-      '{"admin":{"msg.utiliser":true,"msg.prive":true,"msg.groupes":true,"msg.annonces":true,"prog.gerer":true},
-        "pasteur":{"msg.utiliser":true,"msg.prive":true,"msg.groupes":true,"msg.annonces":true,"prog.gerer":true},
-        "gestionnaire":{"msg.utiliser":true,"msg.prive":true,"msg.groupes":true},
+      '{"admin":{"msg.utiliser":true,"msg.prive":true,"msg.groupes":true,"msg.annonces":true,"prog.gerer":true,"inst.voir":true,"inst.gerer":true,"inst.saisir":true},
+        "pasteur":{"msg.utiliser":true,"msg.prive":true,"msg.groupes":true,"msg.annonces":true,"prog.gerer":true,"inst.voir":true},
+        "gestionnaire":{"msg.utiliser":true,"msg.prive":true,"msg.groupes":true,"inst.voir":true,"inst.saisir":true},
         "fidele":{"msg.utiliser":true,"msg.prive":true}}'::jsonb -> role ->> cle
     )::boolean, false)
 $$;
@@ -285,6 +285,28 @@ language sql stable security definer set search_path = public as $$
 $$;
 
 -- ---------- Droits d'écriture ----------
+-- Institutions financières : accès à un compte en banque ou en microfinance
+-- voir : droit « inst.voir », caissier désigné ou bureau de la structure (poste « voir_details »)
+-- saisir : droit « inst.gerer », caissier désigné avec « inst.saisir », ou poste « saisir » de la structure
+-- valider : droit « fin.valider » ou poste « valider » de la structure
+create or replace function public.e360_compte_droit(eg text, d jsonb, cle text) returns boolean
+language sql stable security definer set search_path = public as $$
+  select (e360_super() or eg = any(e360_mes_eglises())) and (
+      e360_super()
+      or e360_droit('inst.gerer', eg)
+      or (cle = 'voir' and e360_droit('inst.voir', eg))
+      or (cle in ('voir', 'saisir') and e360_droit('inst.saisir', eg) and coalesce(d->'responsables', '[]'::jsonb) ?| e360_mes_ids())
+      or (cle = 'valider' and e360_droit('fin.valider', eg))
+      or (coalesce(d->>'structure_id', '') <> '' and (
+            e360_droit_poste(d->>'structure_id', cle)
+            or (cle = 'voir' and (e360_droit_poste(d->>'structure_id', 'voir_details') or e360_droit_poste(d->>'structure_id', 'saisir'))))))
+$$;
+
+create or replace function public.e360_compte_acces(cid text, cle text) returns boolean
+language sql stable security definer set search_path = public as $$
+  select coalesce((select e360_compte_droit(c.eglise_id, c.data, cle) from enregistrements c where c.table_nom = 'comptes' and c.id = cid and not c.supprime), false)
+$$;
+
 create or replace function public.e360_peut_ecrire(t text, eg text, d jsonb, rid text) returns boolean
 language plpgsql stable security definer set search_path = public as $$
 declare
@@ -336,6 +358,10 @@ begin
       if d->>'statut' = 'validee' and coalesce(ancien->>'statut', '') <> 'validee' and not e360_droit('fin.valider', eg) and not e360_acces_caisse(d->>'caisse_id', 'valider') then return false; end if;
       -- Caisse d'une structure : le trésorier (ou le poste autorisé) de cette structure seulement
       if e360_acces_caisse(d->>'caisse_id', 'saisir') or e360_acces_caisse(d->>'caisse_id', 'valider') then return true; end if;
+      -- Versement ou retrait d'un compte en banque : la contrepartie dans la caisse, par qui peut saisir sur ce compte
+      if coalesce(d->>'mouvement_id', '') <> '' then
+        return e360_compte_acces(d->>'compte_id', 'saisir') and (e360_gere(d->>'caisse_id', eg) or e360_droit('inst.gerer', eg));
+      end if;
       -- Transfert : vers ou depuis la caisse d'une structure, seulement par ses responsables ou ceux de l'église
       if d ? 'transfert_id' and d->>'transfert_id' <> '' then
         return (e360_droit('fin.transferer', eg) or e360_droit('fin.valider', eg))
@@ -364,6 +390,13 @@ begin
           -- séance d'un programme régulier (culte, prière…) : droit « Gérer les programmes et le planning »
           or (coalesce(d->>'programme_id', '') <> '' and e360_droit('prog.gerer', eg));
     when 'listes', 'programmes' then return e360_config(eg) or e360_droit('prog.gerer', eg);
+    -- Comptes : ouverts par l'administrateur (droit « inst.gerer ») ou, pour une structure, par son trésorier
+    when 'comptes' then return e360_droit('inst.gerer', eg) or (coalesce(d->>'structure_id', '') <> '' and e360_droit_poste(d->>'structure_id', 'saisir'));
+    when 'mouvements' then
+      select data into ancien from enregistrements where table_nom = 'mouvements' and id = rid;
+      if coalesce(ancien->>'statut', '') = 'validee' then return false; end if;
+      if d->>'statut' = 'validee' and not e360_compte_acces(d->>'compte_id', 'valider') then return false; end if;
+      return e360_compte_acces(d->>'compte_id', 'saisir') or (ancien is not null and e360_compte_acces(d->>'compte_id', 'valider'));
     when 'appartenances' then
       return e360_config(eg) or e360_droit_poste(d->>'structure_id', 'membres')
           -- un fidèle peut demander à rejoindre une structure ; le président (ou le poste désigné) valide
@@ -409,6 +442,8 @@ create policy e360_lecture on public.enregistrements for select to authenticated
     when table_nom = 'notifications' then data->>'user_id' = any(e360_mes_ids())
     when table_nom = 'activites' then eglise_id = any(e360_mes_eglises()) and e360_activite_visible(eglise_id, data) or e360_super()
     when table_nom in ('listes', 'programmes') then eglise_id = any(e360_mes_eglises()) or e360_super()
+    when table_nom = 'comptes' then e360_compte_droit(eglise_id, data, 'voir')
+    when table_nom = 'mouvements' then e360_compte_acces(data->>'compte_id', 'voir')
     when table_nom = 'coordonnees' then eglise_id = any(e360_mes_eglises()) and e360_voit_coordonnees(eglise_id, data->>'fidele_id') or e360_super()
     when table_nom = 'fideles' then eglise_id = any(e360_mes_eglises()) and e360_fidele_visible(eglise_id, id, data) or e360_super()
     when table_nom in ('appartenances', 'postes') then e360_super() or (eglise_id = any(e360_mes_eglises()) and (e360_config(eglise_id) or e360_droit('fin.voir_details', eglise_id)

@@ -34,6 +34,14 @@ export const DROITS = [
     ],
   },
   {
+    groupe: 'Institutions financières',
+    items: [
+      { cle: 'inst.voir', label: 'Consulter les comptes en banque et en microfinance' },
+      { cle: 'inst.gerer', label: 'Ouvrir et paramétrer les comptes, désigner leurs caissiers' },
+      { cle: 'inst.saisir', label: 'Saisir les mouvements (versements, retraits…) des comptes attribués' },
+    ],
+  },
+  {
     groupe: 'Programmes et services',
     items: [
       { cle: 'prog.gerer', label: 'Gérer les programmes, les listes et le planning' },
@@ -90,10 +98,10 @@ const MSG = ['msg.utiliser', 'msg.prive', 'notif.messages', 'notif.annonces', 'n
 const NOTIF_TOUT = ['notif.eglises', 'notif.adhesions', 'notif.membres', 'notif.operations', 'notif.modifications', 'notif.imports', 'notif.clotures', 'notif.configuration'];
 const NOTIF_GESTION = ['notif.operations', 'notif.modifications', 'notif.imports', 'notif.clotures'];
 export const MATRICE_DEFAUT = {
-  admin: avec([...MSG, ...NOTIF_TOUT, 'prog.gerer', 'fin.transferer', 'msg.groupes', 'msg.annonces', 'fin.voir_totaux', 'fin.voir_details', 'fin.voir_graphiques', 'fin.rapports', 'fin.exporter', 'fin.cloturer', 'fin.rouvrir',
+  admin: avec([...MSG, ...NOTIF_TOUT, 'inst.voir', 'inst.gerer', 'inst.saisir', 'prog.gerer', 'fin.transferer', 'msg.groupes', 'msg.annonces', 'fin.voir_totaux', 'fin.voir_details', 'fin.voir_graphiques', 'fin.rapports', 'fin.exporter', 'fin.cloturer', 'fin.rouvrir',
     'admin.caisses', 'admin.categories', 'admin.utilisateurs', 'admin.droits', 'admin.eglise']),
-  pasteur: avec([...MSG, ...NOTIF_TOUT, 'prog.gerer', 'acc.toutes_structures', 'fin.valider', 'msg.groupes', 'msg.annonces', 'fin.voir_totaux', 'fin.voir_details', 'fin.voir_graphiques', 'fin.rapports', 'fin.exporter']),
-  gestionnaire: avec([...MSG, ...NOTIF_GESTION, 'msg.groupes', 'fin.voir_totaux', 'fin.voir_details', 'fin.voir_graphiques', 'fin.rapports', 'fin.exporter',
+  pasteur: avec([...MSG, ...NOTIF_TOUT, 'inst.voir', 'prog.gerer', 'acc.toutes_structures', 'fin.valider', 'msg.groupes', 'msg.annonces', 'fin.voir_totaux', 'fin.voir_details', 'fin.voir_graphiques', 'fin.rapports', 'fin.exporter']),
+  gestionnaire: avec([...MSG, ...NOTIF_GESTION, 'inst.voir', 'inst.saisir', 'msg.groupes', 'fin.voir_totaux', 'fin.voir_details', 'fin.voir_graphiques', 'fin.rapports', 'fin.exporter',
     'fin.saisir', 'fin.modifier', 'fin.supprimer', 'fin.transferer', 'fin.cloturer']),
   fidele: avec([...MSG, 'fin.voir_totaux', 'fin.voir_graphiques']),
 };

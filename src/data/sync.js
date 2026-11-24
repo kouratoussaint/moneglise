@@ -7,8 +7,8 @@
 import { createClient } from '@supabase/supabase-js';
 import { config } from '../config';
 
-export const TABLES = ['eglises', 'users', 'caisses', 'categories', 'operations', 'clotures', 'journal', 'conversations', 'messages', 'lectures', 'appareils', 'structures', 'presences', 'historique', 'corbeille', 'notifications', 'demandes', 'fideles', 'appartenances', 'postes', 'cotisations', 'paiements', 'activites', 'coordonnees', 'parametres', 'listes', 'programmes'];
-export const dbVide = () => ({ version: 1, eglises: [], users: [], caisses: [], categories: [], operations: [], clotures: [], journal: [], conversations: [], messages: [], lectures: [], appareils: [], structures: [], presences: [], historique: [], corbeille: [], notifications: [], demandes: [], fideles: [], appartenances: [], postes: [], cotisations: [], paiements: [], activites: [], coordonnees: [], listes: [], programmes: [], parametres: [], resumes: [], annuaire: [] });
+export const TABLES = ['eglises', 'users', 'caisses', 'categories', 'operations', 'clotures', 'journal', 'conversations', 'messages', 'lectures', 'appareils', 'structures', 'presences', 'historique', 'corbeille', 'notifications', 'demandes', 'fideles', 'appartenances', 'postes', 'cotisations', 'paiements', 'activites', 'coordonnees', 'parametres', 'listes', 'programmes', 'comptes', 'mouvements'];
+export const dbVide = () => ({ version: 1, eglises: [], users: [], caisses: [], categories: [], operations: [], clotures: [], journal: [], conversations: [], messages: [], lectures: [], appareils: [], structures: [], presences: [], historique: [], corbeille: [], notifications: [], demandes: [], fideles: [], appartenances: [], postes: [], cotisations: [], paiements: [], activites: [], coordonnees: [], listes: [], programmes: [], comptes: [], mouvements: [], parametres: [], resumes: [], annuaire: [] });
 
 let client = null, clientUrl = null;
 export function supabase() {

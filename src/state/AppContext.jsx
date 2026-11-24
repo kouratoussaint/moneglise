@@ -6,6 +6,7 @@ import { structuresModele } from '../data/seed';
 import { CATEGORIES_STRUCTURE } from '../lib/structures';
 import { repartir, libellePeriode } from '../lib/cotisations';
 import { modeleProgrammes } from '../lib/programmes';
+import { TYPES_MOUVEMENT } from '../lib/institutions';
 import { conversationsEglise } from '../data/seed';
 import { messagesDe, lectureDe, personne, nomCourt, titreConv, estMembre } from '../lib/messagerie';
 import { initialiserPush, firebaseActif } from '../lib/push';
@@ -977,6 +978,7 @@ export function AppProvider({ children }) {
       const o = db.operations.find((x) => x.id === id);
       if (!o) return null;
       if (estValidee(db, o)) return 'Une opération validée ne peut pas être supprimée : utilisez la contre-passation.';
+      if (o.mouvement_id) return 'Cette opération vient d\'un versement ou d\'un retrait : supprimez le mouvement depuis le compte (Institutions financières).';
       const liees = o.transfert_id ? db.operations.filter((x) => x.transfert_id === o.transfert_id) : [o];
       if (liees.some((x) => estVerrouille(db, x.caisse_id, x.date))) return 'Impossible : un mois concerné est clôturé.';
       maj((d) => { d.operations = d.operations.filter((x) => !liees.some((l) => l.id === x.id)); return d; });
@@ -994,6 +996,74 @@ export function AppProvider({ children }) {
         return d;
       });
       return null;
+    },
+    // ---------- Institutions financières ----------
+    enregistrerCompte(c) {
+      const id = c.id || uid('cpt');
+      maj((d) => {
+        d.comptes = d.comptes || [];
+        const ex = d.comptes.find((x) => x.id === id);
+        if (ex) Object.assign(ex, c, { modifie_par: user.id, modifie_le: new Date().toISOString() });
+        else d.comptes.push({ type: 'banque', responsables: [], signataires: [], solde_initial: 0, actif: true, ...c, id, eglise_id: egliseId, cree_par: user.id, cree_le: new Date().toISOString() });
+        return d;
+      });
+      return id;
+    },
+    // Un versement crée la sortie correspondante dans la caisse, un retrait l'entrée : caisse et compte restent cohérents.
+    // Ces opérations sont marquées comme des transferts : elles ne comptent ni en recette ni en dépense dans le consolidé.
+    enregistrerMouvement(m, fichiers = []) {
+      const compte = (db.comptes || []).find((c) => c.id === m.compte_id);
+      if (!compte) return 'Compte introuvable.';
+      const lien = TYPES_MOUVEMENT[m.type]?.caisse;
+      const ancien = m.id && (db.mouvements || []).find((x) => x.id === m.id);
+      const ancienneOp = ancien?.operation_id && db.operations.find((o) => o.id === ancien.operation_id);
+      if (ancien && ancien.statut === 'validee') return 'Un mouvement validé ne peut plus être modifié.';
+      if (ancienneOp && estVerrouille(db, ancienneOp.caisse_id, ancienneOp.date)) return 'Le mois de l\'opération liée est clôturé dans la caisse.';
+      if (lien && !m.caisse_id) return 'Choisissez la caisse concernée.';
+      if (lien && estVerrouille(db, m.caisse_id, m.date)) return 'Ce mois est clôturé pour la caisse choisie.';
+      const id = m.id || uid('mvt');
+      const nouvelles = fichiers.map((f) => ({ id: f.id, nom: f.nom, type: f.type, taille: f.taille, chemin: `${egliseId}/${id}/${f.id}.${f.ext}`, le: new Date().toISOString(), par: user.id, ...(online ? {} : { local: f.dataUrl }) }));
+      if (online) for (const f of fichiers) piecesAttente.ajouter({ chemin: `${egliseId}/${id}/${f.id}.${f.ext}`, dataUrl: f.dataUrl, type: f.type });
+      const validation = !!eglise?.parametres?.validation_pasteur && m.type !== 'releve';
+      const valide = can('fin.valider') || user.role === 'super_admin';
+      maj((d) => {
+        d.mouvements = d.mouvements || [];
+        let opId = ancien?.operation_id || null;
+        // Opération liée dans la caisse (versement → sortie de caisse, retrait → entrée en caisse)
+        d.operations = d.operations.filter((o) => !(opId && o.id === opId && !lien));
+        if (!lien) opId = null;
+        if (lien) {
+          opId = opId || uid('op');
+          const op = {
+            id: opId, eglise_id: egliseId, caisse_id: m.caisse_id, type: lien, date: m.date, montant: Number(m.montant),
+            categorie_id: `${egliseId}_transfert_${lien}`, libelle: `${m.type === 'versement' ? 'Versement à' : 'Retrait de'} ${compte.institution}`,
+            description: m.libelle || '', observations: m.reference ? `Réf. ${m.reference}` : '', transfert_id: `bq_${id}`, compte_id: compte.id, mouvement_id: id,
+          };
+          const i = d.operations.findIndex((o) => o.id === opId);
+          if (i >= 0) d.operations[i] = { ...d.operations[i], ...op, modifie_par: user.id, modifie_le: new Date().toISOString() };
+          else d.operations.push({ ...op, cree_par: user.id, cree_le: new Date().toISOString() });
+        }
+        const donnees = { ...m, id, montant: Number(m.montant), caisse_id: lien ? m.caisse_id : null, operation_id: opId, eglise_id: egliseId };
+        const i = d.mouvements.findIndex((x) => x.id === id);
+        if (i >= 0) d.mouvements[i] = { ...d.mouvements[i], ...donnees, pieces: [...(d.mouvements[i].pieces || []), ...nouvelles], modifie_par: user.id, modifie_le: new Date().toISOString() };
+        else d.mouvements.push({ ...donnees, pieces: nouvelles, cree_par: user.id, cree_le: new Date().toISOString(),
+          ...(validation ? (valide ? { statut: 'validee', valide_par: user.id, valide_le: new Date().toISOString() } : { statut: 'a_valider' }) : {}) });
+        return d;
+      });
+      return null;
+    },
+    supprimerMouvement(id) {
+      const m = (db.mouvements || []).find((x) => x.id === id);
+      if (!m) return null;
+      if (m.statut === 'validee') return 'Un mouvement validé ne peut pas être supprimé : saisissez un mouvement inverse.';
+      const op = m.operation_id && db.operations.find((o) => o.id === m.operation_id);
+      if (op && estVerrouille(db, op.caisse_id, op.date)) return 'Impossible : le mois de l\'opération liée est clôturé dans la caisse.';
+      if (op && estValidee(db, op)) return 'L\'opération liée dans la caisse est validée : saisissez un mouvement inverse.';
+      maj((d) => { d.mouvements = d.mouvements.filter((x) => x.id !== id); d.operations = d.operations.filter((o) => o.id !== m.operation_id); return d; });
+      return { corbeille: derniereCorbeille.current };
+    },
+    validerMouvements(ids) {
+      maj((d) => { d.mouvements.forEach((x) => { if (ids.includes(x.id) && x.statut === 'a_valider') Object.assign(x, { statut: 'validee', valide_par: user.id, valide_le: new Date().toISOString() }); }); return d; });
     },
     cloturerMois(caisseId, ym) {
       maj((d) => { if (!d.clotures.some((c) => c.caisse_id === caisseId && c.mois === ym)) d.clotures.push(cloturer(d, caisseId, ym, user.id)); journaliser(d, 'cloture', ym); return d; });

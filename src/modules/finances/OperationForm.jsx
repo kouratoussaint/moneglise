@@ -8,7 +8,7 @@ import { dateFr, fcfa, num, parseMontant, today, moisLabel, ymOf } from '../../l
 import { partagerTexte } from '../../lib/exporter';
 import { Champ, Confirmation, EnTete, Feuille, Montant, PastilleCaisse, Segmente, Vide, lirePiece } from '../../components/ui';
 import { estValidee } from '../../lib/finance';
-import { Paperclip, Camera, FileText, X, CheckCircle2, RotateCcw, ExternalLink } from 'lucide-react';
+import { Paperclip, Camera, FileText, X, CheckCircle2, RotateCcw, ExternalLink, Landmark } from 'lucide-react';
 
 export function OperationForm() {
   const { id } = useParams();
@@ -165,7 +165,7 @@ export function OperationDetail() {
   const validee = estValidee(db, o);
   const peutModifier = !verrou && !o.transfert_id && !o.annulee_par && can('fin.modifier', o.caisse_id);
   // Une opération validée ne se supprime pas : elle s'annule par contre-passation
-  const peutSupprimer = !validee && can('fin.supprimer', o.caisse_id);
+  const peutSupprimer = !validee && !o.mouvement_id && can('fin.supprimer', o.caisse_id);
   const peutContrePasser = validee && !o.annulee_par && !o.contre_passation_de && !o.transfert_id && (can('fin.saisir', o.caisse_id) || can('fin.valider'));
   const orig = o.contre_passation_de && db.operations.find((x) => x.id === o.contre_passation_de);
   const annulee = o.annulee_par && db.operations.find((x) => x.id === o.annulee_par);
@@ -197,6 +197,7 @@ export function OperationDetail() {
         <div><dt>Caisse</dt><dd>{caisse?.nom}</dd></div>
         {o.description && <div className="bloc-texte"><dt>Description</dt><dd>{o.description}</dd></div>}
         {o.observations && <div className="bloc-texte"><dt>Observations</dt><dd>{o.observations}</dd></div>}
+        {o.compte_id && <div><dt><Landmark size={16} /> Compte lié</dt><dd><button className="lien" onClick={() => nav(`/institutions/${o.compte_id}`)}>{(db.comptes || []).find((c) => c.id === o.compte_id)?.institution || 'Compte'}</button></dd></div>}
         {liee && <div><dt><ArrowLeftRight size={16} /> Transfert lié</dt><dd><button className="lien" onClick={() => nav(`/operations/${liee.id}`, { replace: true })}>{db.caisses.find((c) => c.id === liee.caisse_id)?.nom}</button></dd></div>}
         <div><dt><User size={16} /> {o.import_lot ? 'Importée par' : 'Saisie par'}</dt><dd>{auteur ? `${auteur.prenom} ${auteur.nom}` : '—'}</dd></div>
         {o.import_lot && <div><dt><FileSpreadsheet size={16} /> Origine</dt><dd>Import Excel</dd></div>}

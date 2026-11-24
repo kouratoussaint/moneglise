@@ -165,6 +165,25 @@ def tests():
     verifier("Programmes : un simple fidèle ne planifie pas", ecrire('membre', 'activites', 'seance2', 'e1', {'programme_id': 'pg_culte', 'titre': 'Culte', 'debut': '2030-01-13T08:00'}), False)
     dest = [x[0] for x in sql("select e360_destinataires_activite('seance1')")]
     verifier("Programmes : seules les personnes désignées sont prévenues", dest, ['u_membre'])
+    # Institutions financières
+    verifier("Comptes : l'administrateur ouvre un compte de l'église", ecrire('admin', 'comptes', 'cpt_eg', 'e1', {'institution': 'MICRO AID', 'type': 'microfinance', 'responsables': ['u_gest']}), True)
+    verifier("Comptes : le pasteur n'ouvre pas de compte", ecrire('pasteur', 'comptes', 'cpt_x', 'e1', {'institution': 'Banque X'}), False)
+    verifier("Comptes : le trésorier JAD ouvre un compte de la JAD", ecrire('tres', 'comptes', 'cpt_jad', 'e1', {'institution': 'Banque', 'structure_id': 's_jad'}), True)
+    verifier("Comptes : le président JAD (sans droit de saisie) n'ouvre pas de compte", ecrire('pres', 'comptes', 'cpt_y', 'e1', {'institution': 'Banque', 'structure_id': 's_jad'}), False)
+    verifier("Comptes : le pasteur consulte les comptes", ids('pasteur', 'comptes'), ['cpt_eg', 'cpt_jad'])
+    verifier("Comptes : un simple fidèle ne voit aucun compte", ids('membre', 'comptes'), [])
+    verifier("Comptes : le trésorier JAD ne voit que celui de la JAD", ids('tres', 'comptes'), ['cpt_jad'])
+    verifier("Comptes : une autre église ne voit rien", ids('externe', 'comptes'), [])
+    verifier("Mouvements : le caissier désigné saisit un versement", ecrire('gest', 'mouvements', 'mv1', 'e1', {'compte_id': 'cpt_eg', 'type': 'versement', 'montant': 500, 'date': '2026-10-05', 'caisse_id': 'c_eg', 'operation_id': 'op_mv1'}), True)
+    verifier("Mouvements : contrepartie du versement dans sa caisse", ecrire('gest', 'operations', 'op_mv1', 'e1', {'caisse_id': 'c_eg', 'type': 'depense', 'montant': 500, 'date': '2026-10-05', 'transfert_id': 'bq_mv1', 'compte_id': 'cpt_eg', 'mouvement_id': 'mv1'}), True)
+    verifier("Mouvements : le trésorier JAD ne saisit pas sur le compte de l'église", ecrire('tres', 'mouvements', 'mv2', 'e1', {'compte_id': 'cpt_eg', 'type': 'frais', 'montant': 5, 'date': '2026-10-05'}), False)
+    verifier("Mouvements : le trésorier JAD ne vide pas la caisse de l'église par un faux versement", ecrire('tres', 'operations', 'op_mv3', 'e1', {'caisse_id': 'c_eg', 'type': 'depense', 'montant': 9, 'date': '2026-10-05', 'transfert_id': 'bq_mv3', 'compte_id': 'cpt_jad', 'mouvement_id': 'mv3'}), False)
+    verifier("Mouvements : le trésorier JAD saisit sur le compte JAD", ecrire('tres', 'mouvements', 'mv4', 'e1', {'compte_id': 'cpt_jad', 'type': 'interets', 'montant': 50, 'date': '2026-10-05'}), True)
+    verifier("Mouvements : le pasteur ne saisit pas", ecrire('pasteur', 'mouvements', 'mv5', 'e1', {'compte_id': 'cpt_eg', 'type': 'frais', 'montant': 5, 'date': '2026-10-05'}), False)
+    verifier("Mouvements : le caissier ne valide pas lui-même", ecrire('gest', 'mouvements', 'mv1', 'e1', {'compte_id': 'cpt_eg', 'type': 'versement', 'montant': 500, 'date': '2026-10-05', 'statut': 'validee'}), False)
+    verifier("Mouvements : le pasteur valide", ecrire('pasteur', 'mouvements', 'mv1', 'e1', {'compte_id': 'cpt_eg', 'type': 'versement', 'montant': 500, 'date': '2026-10-05', 'statut': 'validee'}), True)
+    verifier("Mouvements : un mouvement validé ne se modifie plus", ecrire('admin', 'mouvements', 'mv1', 'e1', {'compte_id': 'cpt_eg', 'type': 'versement', 'montant': 1, 'date': '2026-10-05', 'statut': 'validee'}), False)
+    verifier("Mouvements : le pasteur les consulte, pas un simple fidèle", ('mv1' in (ids('pasteur', 'mouvements') or []), ids('membre', 'mouvements')), (True, []))
     # #9 Pasteur et réouverture
     verifier("#9 Pasteur : ne rouvre pas un mois", comme('pasteur', "update enregistrements set supprime = true where table_nom = 'clotures' and id = 'cl_eg'")[0] and
              sql("select supprime from enregistrements where table_nom = 'clotures' and id = 'cl_eg'")[0][0], False)

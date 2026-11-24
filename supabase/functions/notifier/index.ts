@@ -71,7 +71,7 @@ const ACTIONS: Record<string, string> = {
 function typeHistorique(h: Record<string, any>) {
   const t = h.table, a = h.action;
   if (a === 'import' || a === 'annulation_import') return 'imports';
-  if (t === 'operations') return a === 'creation' ? 'operations' : 'modifications';
+  if (t === 'operations' || t === 'mouvements') return a === 'creation' ? 'operations' : 'modifications';
   if (t === 'clotures' || t === 'demandes' || a === 'cloture' || a === 'reouverture' || a === 'demande_reouverture') return 'clotures';
   if (t === 'users') return a === 'validation' || a === 'refus' ? 'adhesions' : 'membres';
   if (t === 'eglises' && (a === 'validation' || a === 'refus')) return 'eglises';
