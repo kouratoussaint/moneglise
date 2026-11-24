@@ -11,7 +11,7 @@ import { lireApplication } from '../lib/application';
 import { Wrench } from 'lucide-react';
 import { caissesEglise } from '../lib/finance';
 import { ROLES } from '../lib/permissions';
-import { Avatar, Confirmation, Feuille, LogoEglise, MenuCtx, SYMBOLE, Toast, pileRetour, useRetour } from './ui';
+import { Avatar, Champ, Confirmation, Feuille, LogoEglise, MenuCtx, SYMBOLE, Toast, pileRetour, useRetour } from './ui';
 import { ecouterClics } from '../lib/notifications';
 import { jouer } from '../lib/son';
 import { totalNonLus } from '../lib/messagerie';
@@ -73,6 +73,7 @@ export function EtatSync({ compact }) {
   const icone = statut === 'en_cours' ? <RefreshCw size={16} className="tourne" /> : statut === 'hors_ligne' ? <CloudOff size={16} /> : statut === 'erreur' ? <AlertTriangle size={16} /> : <Cloud size={16} />;
   const texte = statut === 'en_cours' ? 'Synchronisation…'
     : statut === 'hors_ligne' ? `Hors ligne${attente ? ` · ${attente} en attente` : ''}`
+      : statut === 'reconnexion' ? 'Mot de passe requis pour synchroniser'
       : statut === 'erreur' ? 'Échec de la synchronisation'
         : attente ? `${attente} modification(s) à envoyer` : `Synchronisé ${ilYa(derniere)}`;
   if (compact) return <button className={`puce-sync ${statut}`} onClick={() => actions.synchroniser()} aria-label={texte}>{icone}{attente > 0 && <b>{attente}</b>}</button>;
@@ -81,6 +82,31 @@ export function EtatSync({ compact }) {
       {icone}<span>{texte}</span>
       <button className="lien" disabled={statut === 'en_cours'} onClick={() => actions.synchroniser()}>Synchroniser</button>
     </div>
+  );
+}
+
+// Session ouverte sans internet, application relancée : le serveur est de nouveau joignable,
+// il suffit du mot de passe pour envoyer les modifications faites hors ligne
+function Reconnexion() {
+  const { sync, actions, notifier } = useApp();
+  const [mdp, setMdp] = useState('');
+  const [erreur, setErreur] = useState('');
+  const [attente, setAttente] = useState(false);
+  const [plusTard, setPlusTard] = useState(false);
+  if (sync.statut !== 'reconnexion' || plusTard) return null;
+  const valider = async () => {
+    setAttente(true); setErreur('');
+    const e = await actions.reconnecter(mdp);
+    setAttente(false);
+    if (e) setErreur(e); else { setMdp(''); notifier('Reconnecté au serveur'); }
+  };
+  return (
+    <Feuille ouverte onFermer={() => setPlusTard(true)} titre="Reconnexion au serveur"
+      pied={<><button className="btn btn-doux" onClick={() => setPlusTard(true)}>Plus tard</button><button className="btn btn-primaire" disabled={mdp.length < 6 || attente} onClick={valider}>{attente ? 'Connexion…' : 'Se reconnecter'}</button></>}>
+      <p className="texte-doux">Internet est de nouveau disponible. Saisissez votre mot de passe pour envoyer au serveur les modifications faites sans connexion{sync.attente ? ` (${sync.attente})` : ''}.</p>
+      <Champ label="Mot de passe"><input type="password" value={mdp} onChange={(e) => setMdp(e.target.value)} autoComplete="current-password" /></Champ>
+      {erreur && <p className="erreur">{erreur}</p>}
+    </Feuille>
   );
 }
 
@@ -258,6 +284,7 @@ export default function AppShell() {
           </div>
         </Feuille>
         <Tiroir ouvert={menu} fermer={() => setMenu(false)} />
+        <Reconnexion />
         <Toast />
       </div>
     </MenuCtx.Provider>

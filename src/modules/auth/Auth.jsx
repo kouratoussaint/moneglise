@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Mail, Lock, ChevronDown, Server, MailCheck, Cloud } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, ChevronDown, Server, MailCheck, Cloud, WifiOff } from 'lucide-react';
 import { listeEglises, listeStructures } from '../../data/sync';
 import { useApp } from '../../state/AppContext';
+import { compteMemorise } from '../../lib/horsLigne';
 import { Champ, IMAGES, SYMBOLE, Segmente, Toast } from '../../components/ui';
 
 const DEMO = [
@@ -55,6 +56,15 @@ export function Connexion() {
   const [erreur, setErreur] = useState('');
   const [demo, setDemo] = useState(false);
   const [attente, setAttente] = useState(false);
+  const [reseau, setReseau] = useState(() => navigator.onLine !== false);
+  const memo = online ? compteMemorise() : null;
+  useEffect(() => {
+    const maj = () => setReseau(navigator.onLine !== false);
+    window.addEventListener('online', maj); window.addEventListener('offline', maj);
+    return () => { window.removeEventListener('online', maj); window.removeEventListener('offline', maj); };
+  }, []);
+  // Dernier compte utilisé : e-mail proposé d'office
+  useEffect(() => { if (memo && !email) setEmail(memo.email); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   if (pret && user) return <Navigate to="/" replace />;
   if (!pret) return <div className="chargement"><span className="loader" /></div>;
 
@@ -69,6 +79,9 @@ export function Connexion() {
     <Cadre>
       <h1>Connexion</h1>
       <p className="texte-doux">Entrez l'adresse e-mail de votre compte.</p>
+      {online && !reseau && (
+        <p className="note"><WifiOff size={16} /><span>{memo ? `Pas de connexion internet : vous pouvez vous connecter avec le dernier compte utilisé sur ce téléphone (${memo.email}) et travailler sur les données de l'appareil.` : 'Pas de connexion internet : la première connexion sur ce téléphone doit se faire avec internet.'}</span></p>
+      )}
       <form onSubmit={soumettre} className="pile">
         <div className="saisie-icone">
           <Mail size={18} />
