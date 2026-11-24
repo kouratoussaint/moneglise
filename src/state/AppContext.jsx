@@ -7,6 +7,7 @@ import { CATEGORIES_STRUCTURE } from '../lib/structures';
 import { repartir, libellePeriode } from '../lib/cotisations';
 import { modeleProgrammes } from '../lib/programmes';
 import { TYPES_MOUVEMENT } from '../lib/institutions';
+import * as horsLigne from '../lib/horsLigne';
 import { conversationsEglise } from '../data/seed';
 import { messagesDe, lectureDe, personne, nomCourt, titreConv, estMembre } from '../lib/messagerie';
 import { initialiserPush, firebaseActif } from '../lib/push';
@@ -93,6 +94,8 @@ export function AppProvider({ children }) {
   const [toast, setToast] = useState(null);
   const toastTimer = useRef();
   const enCours = useRef(false);
+  const finHorsLigne = () => { const x = repository.session.lire(); if (x?.horsLigne) { const { horsLigne: _h, ...reste } = x; setSession(reste); repository.session.ecrire(reste); } };
+  const reconnexion = useRef(null); // identifiants gardés en mémoire (jamais écrits) après une connexion sans internet
   const minuteur = useRef();
   const convOuverte = useRef(null);
   const userRef = useRef(null), egliseRef = useRef(null), derniereCorbeille = useRef([]);
@@ -123,8 +126,25 @@ export function AppProvider({ children }) {
     if (enCours.current) return false;
     if (!enLigneReseau()) { setSync((s) => ({ ...s, statut: 'hors_ligne' })); return false; }
     const sb = supabase();
-    const { data: { session: s } } = await sb.auth.getSession();
-    if (!s) return false;
+    const lu = await sb.auth.getSession().catch((e) => ({ data: {}, error: e }));
+    let s = lu.data?.session;
+    // Connexion ouverte sans internet : on s'identifie auprès du serveur dès que le réseau revient
+    if (!s && reconnexion.current) {
+      const { data, error } = await sb.auth.signInWithPassword(reconnexion.current).catch((e) => ({ error: e }));
+      if (data?.session) { s = data.session; reconnexion.current = null; finHorsLigne(); }
+      else if (error && !horsLigne.erreurReseau(error)) {
+        reconnexion.current = null;
+        notifier('Votre mot de passe a changé : reconnectez-vous pour envoyer vos modifications.', 'erreur');
+        setSync((x) => ({ ...x, statut: 'erreur', message: 'Reconnexion nécessaire' }));
+      }
+    }
+    if (!s) {
+      // Réseau disponible, serveur joignable, mais plus aucune session valide : il faut se reconnecter
+      // Session ouverte sans internet puis application relancée : on redemande seulement le mot de passe
+      if (!lu.error && !reconnexion.current && repository.session.lire()?.horsLigne) setSync((x) => ({ ...x, statut: 'reconnexion' }));
+      else if (!lu.error && !reconnexion.current && repository.session.lire()) { setSession(null); repository.session.ecrire(null); }
+      return false;
+    }
     enCours.current = true;
     setSync((x) => ({ ...x, statut: 'en_cours' }));
     try {
@@ -203,9 +223,11 @@ export function AppProvider({ children }) {
       const d = await repository.charger();
       dbRef.current = d; setDbState(d);
       if (online) {
-        const { data } = await supabase().auth.getSession();
-        if (!data.session) { setSession(null); repository.session.ecrire(null); }
-        else synchroniser();
+        // Sans réseau, le jeton expiré ne peut pas être renouvelé : on garde la session locale
+        // (les données de l'appareil restent consultables), le serveur sera rejoint au retour du réseau
+        const { data, error } = await supabase().auth.getSession().catch((e) => ({ data: {}, error: e }));
+        if (data?.session) synchroniser();
+        else if (!error && enLigneReseau() && !repository.session.lire()?.horsLigne) { setSession(null); repository.session.ecrire(null); }
       }
     })();
   }, [online, synchroniser]);
@@ -387,16 +409,18 @@ export function AppProvider({ children }) {
   }, [online, user?.id]);
 
   const journaliser = (d, action, detail) => d.journal.push({ id: uid('j'), eglise_id: egliseId, user_id: user?.id, action, detail, le: new Date().toISOString() });
-  const ouvrir = (u, authId) => { const s = { userId: u.id, authId }; setSession(s); repository.session.ecrire(s); };
+  const ouvrir = (u, authId, extra = {}) => { const s = { userId: u.id, authId, ...extra }; setSession(s); repository.session.ecrire(s); };
 
   // Connexion en ligne : copie locale propre, synchronisation complète, puis identification
   async function ouvrirSessionEnLigne(s) {
     const precedente = repository.session.lire();
-    if (precedente?.authId !== s.user.id) {
+    const proprietaire = metaRef.current.proprietaire || precedente?.authId;
+    if (proprietaire !== s.user.id) {
       await repository.effacerLocal();
       ecrireMeta({ file: {}, depuis: null, derniere: null });
       setDb(dbVide());
     }
+    ecrireMeta({ ...metaRef.current, proprietaire: s.user.id });
     const ok = await synchroniser({ complet: true });
     const toutes = dbRef.current.users.filter((x) => x.auth_id === s.user.id && x.statut !== 'refuse');
     const adhesions = toutes.filter((x) => x.actif !== false);
@@ -431,12 +455,45 @@ export function AppProvider({ children }) {
     return null;
   }
 
+  // Connexion sans réseau : dernier compte connecté sur ce téléphone, données de l'appareil
+  async function connexionSansInternet(email, mdp) {
+    const authId = await horsLigne.verifier(email, mdp);
+    const memo = horsLigne.compteMemorise();
+    if (!authId) {
+      if (!memo) return 'Pas de connexion internet. La toute première connexion sur ce téléphone doit se faire avec internet.';
+      if (memo.email !== email.trim().toLowerCase()) return `Pas de connexion internet. Sans réseau, seul le dernier compte utilisé sur ce téléphone (${memo.email}) peut se connecter.`;
+      return 'Mot de passe incorrect.';
+    }
+    if ((metaRef.current.proprietaire || authId) !== authId) return 'Pas de connexion internet et aucune donnée de ce compte sur le téléphone.';
+    const toutes = dbRef.current.users.filter((x) => x.auth_id === authId && x.statut !== 'refuse');
+    const pref = repository.session.lire()?.egliseId;
+    const u = toutes.find((x) => x.eglise_id === pref && x.actif !== false) || toutes.find((x) => x.actif !== false && (x.statut || 'actif') === 'actif') || toutes.find((x) => x.actif !== false);
+    if (!u) return toutes.length ? 'Ce compte est désactivé. Contactez l\'administrateur de votre église.' : 'Pas de connexion internet et aucune donnée de ce compte sur le téléphone.';
+    reconnexion.current = { email: email.trim(), password: mdp };
+    ouvrir(u, authId, { horsLigne: true });
+    setSync((x) => ({ ...x, statut: 'hors_ligne' }));
+    notifier('Connecté sans internet : vos saisies seront envoyées dès le retour du réseau.', 'ok');
+    return null;
+  }
+
   const actions = {
     async connexion(email, mdp) {
       if (online) {
-        const { data, error } = await supabase().auth.signInWithPassword({ email: email.trim(), password: mdp });
-        if (error) return messageAuth(error);
-        return ouvrirSessionEnLigne(data.session);
+        const memo = horsLigne.compteMemorise();
+        // Des modifications d'un autre compte attendent encore d'être envoyées : on ne les efface pas
+        const attente = Object.keys(metaRef.current.file || {}).length;
+        if (attente && memo && memo.email !== email.trim().toLowerCase()) {
+          return `${attente} modification(s) faite(s) avec le compte ${memo.email} n'ont pas encore été envoyées au serveur. Connectez-vous d'abord avec ce compte quand internet est disponible.`;
+        }
+        let res = null;
+        if (enLigneReseau()) res = await supabase().auth.signInWithPassword({ email: email.trim(), password: mdp }).catch((e) => ({ error: e }));
+        if (res?.data?.session) {
+          const m = await ouvrirSessionEnLigne(res.data.session);
+          if (!m) horsLigne.memoriser(email, mdp, res.data.session.user.id);
+          return m;
+        }
+        if (res?.error && !horsLigne.erreurReseau(res.error)) return messageAuth(res.error);
+        return connexionSansInternet(email, mdp);
       }
       const toutes = db.users.filter((x) => x.email.toLowerCase() === email.trim().toLowerCase() && x.statut !== 'refuse');
       const u = toutes.find((x) => (x.statut || 'actif') === 'actif') || toutes[0];
@@ -480,14 +537,26 @@ export function AppProvider({ children }) {
     },
     async deconnexion() {
       if (online) {
+        // La copie locale reste sur le téléphone : elle permet de se reconnecter sans internet
+        // et conserve les modifications pas encore envoyées. Elle est effacée si un autre compte se connecte.
         await synchroniser();
-        await supabase().auth.signOut().catch(() => {});
-        await repository.effacerLocal();
-        ecrireMeta({ file: {}, depuis: null, derniere: null });
-        setDb(dbVide());
+        reconnexion.current = null;
+        await supabase().auth.signOut({ scope: 'local' }).catch(() => {});
       }
       effacerNotifs(); setNotifs([]);
       setSession(null); repository.session.ecrire(null);
+    },
+    // Après une connexion sans internet : identification auprès du serveur pour envoyer les modifications
+    async reconnecter(mdp) {
+      const memo = horsLigne.compteMemorise();
+      if (!memo) return 'Reconnectez-vous depuis l\'écran de connexion.';
+      const r = await supabase().auth.signInWithPassword({ email: memo.email, password: mdp }).catch((e) => ({ error: e }));
+      if (r.error) return horsLigne.erreurReseau(r.error) ? 'Le serveur est encore injoignable. Réessayez plus tard.' : messageAuth(r.error);
+      if (r.data.session.user.id !== memo.authId) { await supabase().auth.signOut({ scope: 'local' }); return 'Ce mot de passe correspond à un autre compte.'; }
+      horsLigne.memoriser(memo.email, mdp, memo.authId);
+      finHorsLigne();
+      await synchroniser();
+      return null;
     },
     async rafraichirAnnuaire() {
       if (!online) return;
